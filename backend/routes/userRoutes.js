@@ -97,7 +97,7 @@ router.post('/signin', async (req, res) => {
         rollno: userData.rollno,
         userRole: userData.role
       },
-      process.env.JWT_SECRET || 'secretKey'
+      process.env.JWT_SECRET_KEY
     );
 
     res.status(200).json({ message: 'Login Successfully', role: userData.role, token });

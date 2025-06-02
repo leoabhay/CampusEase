@@ -14,7 +14,7 @@ function verifyToken(req, res, next) {
 
   try {
     // Verify the token using the secret key
-    const payload = jwt.verify(token, 'secretKey'); // Ideally, replace 'secretKey' with process.env.JWT_SECRET
+    const payload = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     if (!payload) {
       return res.status(401).json({ message: 'Unauthorized request: Invalid token' });
