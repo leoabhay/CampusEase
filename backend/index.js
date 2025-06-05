@@ -8,7 +8,7 @@ const path = require('path');
 const userRoutes = require('./routes/userRoutes');
 const otpRoutes=require('./routes/otpRoutes')
 const profileRoutes=require('./routes/profileRoutes')
-const sendemail=require('./routes/sendemailRoutes');
+const sendemail=require('./routes/sendEmailRoutes');
 
 // Connect to database
 connectDB();
@@ -17,8 +17,8 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/otp', otpRoutes);
-// app.use('/api/profile', profileRoutes);
-// app.use('/api/sendemail', sendemail);
+app.use('/api/profile', profileRoutes);
+app.use('/api/sendemail', sendemail);
 
 // Serve static files from the "uploads" directory
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

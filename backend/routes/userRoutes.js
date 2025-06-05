@@ -21,7 +21,7 @@ const upload = multer({ storage });
 // Route to register a new user (signup)
 router.post('/signup', upload.single("photo"), async (req, res) => {
   try {
-    const { name, email, rollno, address, password, confirmPassword, role } = req.body;
+    const { name, email, rollno, phone, address, password, confirmPassword, role } = req.body;
 
     // Check if passwords match
     if (password !== confirmPassword) {
@@ -48,6 +48,7 @@ router.post('/signup', upload.single("photo"), async (req, res) => {
       name,
       email,
       rollno,
+      phone,
       address,
       password: hashedPassword,
       role,
@@ -61,14 +62,16 @@ router.post('/signup', upload.single("photo"), async (req, res) => {
     }
 
     await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+    // console.log('New user registered:', newUser);
+    res.status(201).json({ message: 'User registered successfully', users: newUser });
   } catch (error) {
+    // console.error('Error during registration:', error);
     res.status(500).json({ message: 'Something went wrong during registration', error });
   }
 });
 
 // Route for user login
-router.post('/signin', async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -79,6 +82,7 @@ router.post('/signin', async (req, res) => {
 
     // Check verification
     if (!userData.isVerified) {
+      console.log('User is not verified:', userData);
       return res.status(403).json({ message: 'User is not verified. Please verify before login!', userData });
     }
 
@@ -100,8 +104,10 @@ router.post('/signin', async (req, res) => {
       process.env.JWT_SECRET_KEY
     );
 
-    res.status(200).json({ message: 'Login Successfully', role: userData.role, token });
+    // console.log('User logged in:', userData);
+    res.status(200).json({ message: 'Login Successfully', role: userData.role, token, users: userData });
   } catch (error) {
+    // console.error('Error during login:', error);
     res.status(500).json({ message: 'Something went wrong', error });
   }
 });
@@ -112,9 +118,11 @@ router.get('/user/faculty', async (req, res) => {
   try {
     const faculty = await userRegister.find({ role: 'faculty' });
     const count = await userRegister.countDocuments({ role: 'faculty' });
-    res.status(200).json({ faculty, count });
+    // console.log('Faculty users:', faculty, 'Total faculty users count :',count);
+    res.status(200).json({ count, faculty });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // console.error('Error fetching faculty users:', err);
+    res.status(500).json({ message: 'Failed to fetch faculty users', error });
   }
 });
 
@@ -123,9 +131,11 @@ router.get('/user/student', async (req, res) => {
   try {
     const student = await userRegister.find({ role: 'student' });
     const count = await userRegister.countDocuments({ role: 'student' });
-    res.status(200).json({ student, count });
+    // console.log('Student users:', student, 'Total student users count :',count);
+    res.status(200).json({ count, student });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // console.error('Error fetching student users:', err);
+    res.status(500).json({ message: 'Failed to fetch student users', error });
   }
 });
 
@@ -134,23 +144,54 @@ router.get('/user/secretary', async (req, res) => {
   try {
     const secretary = await userRegister.find({ role: 'secretary' });
     const count = await userRegister.countDocuments({ role: 'secretary' });
-    res.status(200).json({ secretary, count });
+    // console.log('Student users:', secretary, 'Total secretary users count :',count);
+    res.status(200).json({ count, secretary});
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // console.error('Error fetching secretary users:', err);
+    res.status(500).json({ message: 'Failed to fetch secretary users', error });
   }
 });
 
 // Get all users
-router.get('/userdata', async (req, res) => {
+router.get('/user/all', async (req, res) => {
   try {
     const userData = await userRegister.find();
-    res.status(200).json({ userData });
+    const count = await userRegister.countDocuments();
+    // console.log('total users:', count);
+    res.status(200).json({ count, userData });
   } catch (error) {
+    // console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Failed to fetch users', error });
   }
 });
 
-// Get user data by verified token
+// Get verified users
+router.get('/user/verified', async (req, res) => {
+  try {
+    const verifiedUsers = await userRegister.find({ isVerified: true });
+    const count = await userRegister.countDocuments({ isVerified: true });
+    // console.log('Total verified users count :',count);
+    res.status(200).json({ count, verifiedUsers });
+  } catch (err) {
+    // console.error('Error fetching verified users:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get unverified users
+router.get('/user/unverified', async (req, res) => {
+  try {
+    const unverifiedUsers = await userRegister.find({ isVerified: false });
+    const count = await userRegister.countDocuments({ isVerified: false });
+    // console.log('Total unverified users count :',count);
+    res.status(200).json({ count, unverifiedUsers });
+  } catch (err) {
+    // console.error('Error fetching unverified users:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Route to get user data based on verified JWT token
 router.get('/getuserdata', verifyToken, async (req, res) => {
   try {
     const { email } = req.user;
@@ -158,9 +199,11 @@ router.get('/getuserdata', verifyToken, async (req, res) => {
     if (userdata) {
       return res.status(200).json({ data: userdata });
     } else {
+      console.log('User data not found for email:', email);
       res.status(404).json({ message: "Data not found" });
     }
   } catch (error) {
+    console.error('Error fetching user data:', error);
     res.status(500).json({ message: 'Something went wrong', error });
   }
 });
@@ -168,16 +211,13 @@ router.get('/getuserdata', verifyToken, async (req, res) => {
 // Update user data
 router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res) => {
   try {
-    const { address, biography, facebook, instagram, whatsapp, website } = req.body;
+    const { phone, address, biography} = req.body;
     const file = req.file;
 
     const updateData = {};
+    if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
     if (biography) updateData.biography = biography;
-    if (facebook) updateData.facebook = facebook;
-    if (instagram) updateData.instagram = instagram;
-    if (whatsapp) updateData.whatsapp = whatsapp;
-    if (website) updateData.website = website;
     if (file) updateData.photo = `http://localhost:3200/uploads/${file.filename}`;
 
     const updatedUser = await userRegister.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true });

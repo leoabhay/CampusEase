@@ -4,13 +4,10 @@ const registerSchema= new mongoose.Schema({
     name:{type:String},
     photo:{type:String},
     email:{type:String, unique:true, required:true},
-    rollno: { type: Number, unique: true, sparse: true }, 
+    rollno: { type: Number, unique: true, sparse: true },
+    phone:{type:String, unique:true},
     address:{type:String},
-    // biography:{type:String},
-    // facebook:{type:String},
-    // instagram:{type:String},
-    // whatsapp:{type:String},
-    // website:{type:String},
+    biography:{type:String},
     password:{type:String},
     confirmPassword:{type:String},
     role:{
@@ -18,7 +15,7 @@ const registerSchema= new mongoose.Schema({
         enum:['student','faculty','secretary','admin'],
         default:'student'
     },
-    registereddate:{ type: String },
+    registeredDate:{ type: String },
     isVerified:{ type:Boolean, required:true }
 });
 
