@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const userRegister = require('../models/signupModel');
+const userRegister = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middleware');
 const bcrypt = require('bcrypt');
@@ -113,16 +113,16 @@ router.post('/login', async (req, res) => {
 });
 
 // Get users by role
-// Get all faculty users
-router.get('/user/faculty', async (req, res) => {
+// Get all teacher users
+router.get('/user/teacher', async (req, res) => {
   try {
-    const faculty = await userRegister.find({ role: 'faculty' });
-    const count = await userRegister.countDocuments({ role: 'faculty' });
-    // console.log('Faculty users:', faculty, 'Total faculty users count :',count);
-    res.status(200).json({ count, faculty });
+    const teacher = await userRegister.find({ role: 'teacher' });
+    const count = await userRegister.countDocuments({ role: 'teacher' });
+    // console.log('Teacher users:', teacher, 'Total teacher users count :',count);
+    res.status(200).json({ count, teacher });
   } catch (err) {
-    // console.error('Error fetching faculty users:', err);
-    res.status(500).json({ message: 'Failed to fetch faculty users', error });
+    // console.error('Error fetching teacher users:', err);
+    res.status(500).json({ message: 'Failed to fetch teacher users', error });
   }
 });
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
-const userRegister = require('../models/signupModel');
+const userRegister = require('../models/userModel');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('../middleware');
@@ -33,6 +33,21 @@ function sendVerificationEmail(user) {
     };
     return transporter.sendMail(mailOptions);
 }
+
+// for checking nodemailer
+// const mailOptions = {
+//     from: process.env.EMAIL_USER,
+//     to: process.env.EMAIL_USER,
+//     subject: 'SMTP Test',
+//     text: 'This is a test email.',
+// };
+
+// transporter.sendMail(mailOptions, (error, info) => {
+//     if (error) {
+//         return console.log('Error:', error);
+//     }
+//     console.log('Email sent:', info.response);
+// });
 
 // User registration with email verification
 router.post('/signupUser', verifyToken, async (req, res) => {
