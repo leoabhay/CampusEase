@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Enrollment = require('../models/enrollmentModel')
 const UserSubjects  = require('../models/userSubjectModel')
-const verifyToken=require('../middleware')
+const verifyToken=require('../middlewares/middleware')
 const Signup = require('../models/userModel');
 
 // Route to create a new enrollment
@@ -217,6 +217,11 @@ router.delete('/deleteSubject/:enrollmentId/:subjectCode', verifyToken, async (r
       console.error('Error deleting subject:', error);
       res.status(500).json({ message: 'Something went wrong', error });
   }
+});
+
+// check if the user route is working
+router.get('/', (req, res) => {
+  res.send('Discussion route is working!');
 });
 
 module.exports = router;

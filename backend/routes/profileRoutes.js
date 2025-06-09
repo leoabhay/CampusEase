@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const Profile = require('../models/profileModel');
-const verifyToken = require('../middleware');
+const verifyToken = require('../middlewares/middleware');
 
 // Configure Multer storage for file uploads
 const storage = multer.diskStorage({
@@ -58,6 +58,11 @@ router.get('/profileData', verifyToken, async (req, res) => {
     console.error('Error fetching profile:', err);
     res.status(500).json({ message: 'Error fetching profile', error: err.message });
   }
+});
+
+// check if the user route is working
+router.get('/', (req, res) => {
+  res.send('Profile route is working!');
 });
 
 module.exports = router;

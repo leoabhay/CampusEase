@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const createDepartmentListModel = require('../models/createDepartmentModel');
-const verifyToken = require('../middleware');
+const verifyToken = require('../middlewares/middleware');
 
 // route to create a new department
 router.post('/postDepartments', async (req, res) => {
@@ -69,6 +69,11 @@ router.delete('/departments/:id', async (req, res) => {
     } catch (error) {
         res.status(500).send(error);
     }
+});
+
+// check if the user route is working
+router.get('/', (req, res) => {
+  res.send('Department route is working!');
 });
 
 module.exports = router;

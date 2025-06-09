@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Student = require('../models/otpModel');
 const nodemailer = require('nodemailer');
-const verifyToken = require('../middleware'); // Middleware to verify JWT token
+const verifyToken = require('../middlewares/middleware'); // Middleware to verify JWT token
 
 // Calculates the distance between two coordinates using the Haversine formula
 function haversineDistance(coords1, coords2) {

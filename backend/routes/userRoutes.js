@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const userRegister = require('../models/userModel');
 const jwt = require('jsonwebtoken');
-const verifyToken = require('../middleware');
+const verifyToken = require('../middlewares/middleware');
 const bcrypt = require('bcrypt');
 
 // Multer storage config for handling photo uploads

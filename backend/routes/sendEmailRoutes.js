@@ -4,7 +4,7 @@ require('dotenv').config();
 const userRegister = require('../models/userModel');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-const verifyToken = require('../middleware');
+const verifyToken = require('../middlewares/middleware');
 const bcrypt = require('bcrypt');
 
 // Setup nodemailer transporter for sending emails
@@ -215,6 +215,11 @@ router.post('/reset-password', async (req, res) => {
     } catch (error) {
         return res.status(400).json({ message: 'Invalid or expired token', error });
     }
+});
+
+// check if the user route is working
+router.get('/', (req, res) => {
+  res.send('Send email route is working!');
 });
 
 module.exports = router;

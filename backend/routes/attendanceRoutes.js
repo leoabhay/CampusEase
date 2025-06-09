@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../middleware')
+const verifyToken = require('../middlewares/middleware')
 const Attendance = require('../models/attendanceModel');
 
 // Route to save attendance
@@ -32,5 +32,10 @@ router.get('/getattendance',verifyToken, async (req, res) => {
     const attendance = await Attendance.find();
     res.json({ attendance: attendance });
 })
+
+// check if the user route is working
+router.get('/', (req, res) => {
+  res.send('Attendance route is working!');
+});
 
 module.exports = router;
