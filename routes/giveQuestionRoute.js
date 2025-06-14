@@ -1,50 +1,61 @@
 const express = require('express');
 const router = express.Router();
-const ModelQuestion = require('../models/giveQuestionModel')
-const verifyToken=require('../middlewares/middleware')
+const ModelQuestion = require('../models/giveQuestionModel');
+const verifyToken = require('../middlewares/middleware');
 const multer = require('multer');
-const fs = require('fs');
 const path = require('path');
-const Signup=require('../models/userModel');
-const Enrollment=require('../models/enrollmentModel');
-const UserSubjects= require('../models/userSubjectModel');
+const fs = require('fs').promises;
+const Signup = require('../models/userModel');
+const Enrollment = require('../models/enrollmentModel');
+const UserSubjects = require('../models/userSubjectModel');
 
-// Ensure uploads/questions directory exists
-const uploadDir = path.join(__dirname, '../uploads/questions');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// Multer Configuration
+// Define the upload path
+const uploadPath = path.join(__dirname, '../uploads/questions');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(uploadPath, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadPath}`);
+  } catch (err) {
+    console.error('Failed to create upload directory:', err);
+  }
 }
+ensureUploadDir();
 
+// Multer configuration
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir); // Use absolute path
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
+  destination: (req, file, cb) => {
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // Create a new model question
-router.post('/submit-model-question',verifyToken, upload.single('file'), async (req, res) => {
+router.post('/submit-model-question', verifyToken, upload.single('file'), async (req, res) => {
     try {
         const { subject, model_question } = req.body;
         const file = req.file;
-        if(!file){
+
+        if (!file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        else{
-            const filename = file.filename;
-            const newModelQuestion = new ModelQuestion({
-                subject,
-                model_question,
-                file:`http://localhost:3200/uploads/questions/${filename}`
-            });
-            const savedModelQuestion = await newModelQuestion.save();
-            res.status(201).json(savedModelQuestion);
-        }
-        
+
+        const filename = file.filename;
+        const newModelQuestion = new ModelQuestion({
+            subject,
+            model_question,
+            file: `http://localhost:3200/uploads/questions/${filename}`
+        });
+
+        const savedModelQuestion = await newModelQuestion.save();
+        res.status(201).json(savedModelQuestion);
+
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -73,64 +84,57 @@ router.get('/model-questions/:id', async (req, res) => {
     }
 });
 
-// Read One by email
+// Get model questions submitted by teacher (email-based)
 router.get('/getmodelquestiongivenbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
         const user = await Signup.findOne({ email });
 
-        // If the user is not found, handle the error
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        // Find the enrollment details based on the teacher's name
-        const enrollment= await Enrollment.findOne({ "subjects.teacher": user.email });
-        
+
+        const enrollment = await Enrollment.findOne({ "subjects.teacher": user.email });
+
         if (!enrollment) {
-             return res.status(404).json({ message: 'Enrollment not found' });
+            return res.status(404).json({ message: 'Enrollment not found' });
         }
-       
-        // Extract the subjects taught by this teacher
+
         const subjectsTaught = enrollment.subjects
             .filter(subject => subject.teacher === user.email)
             .map(subject => subject.name);
 
         if (subjectsTaught.length === 0) {
-           return res.status(404).json({ message: 'No subjects found for this teacher' });
-           }   
-           
-        // Find question for the subjects taught by this teacher
+            return res.status(404).json({ message: 'No subjects found for this teacher' });
+        }
+
         const question = await ModelQuestion.find({ subject: { $in: subjectsTaught } });
 
-            // Check if question is an empty array
-            if (!question || question.length === 0) {
-                return res.status(404).json({ message: 'No model question found' });
-               }
-      
-                res.json({ Model_Question: question });
-            
+        if (!question || question.length === 0) {
+            return res.status(404).json({ message: 'No model question found' });
+        }
+
+        res.json({ Model_Question: question });
+
     } catch (error) {
-        console.error('Error fetching question:', error); // Log the error
+        console.error('Error fetching question:', error);
         res.status(500).json({ message: 'Error fetching question', error: error.message });
     }
-  });
+});
 
 // Get questions by enrolled subjects for a student
 router.get('/getQuestionsByEnrolledSubject', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
 
-        // Find the enrollment details for the logged-in student
         const enrollment = await UserSubjects.findOne({ userEmail: email });
 
         if (!enrollment) {
             return res.status(404).json({ message: 'Enrollment not found for the user' });
         }
 
-        // Extract the subjects the student is enrolled in
         const enrolledSubjects = enrollment.subjects.map(subject => subject.name);
 
-        // Find the questions given by the teacher for the enrolled subjects
         const questions = await ModelQuestion.find({ subject: { $in: enrolledSubjects } });
 
         if (!questions || questions.length === 0) {

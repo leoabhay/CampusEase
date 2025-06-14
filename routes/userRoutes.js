@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const userRegister = require('../models/userModel');
 const jwt = require('jsonwebtoken');
@@ -9,18 +9,24 @@ const verifyToken = require('../middlewares/middleware');
 const bcrypt = require('bcrypt');
 
 // Multer configuration
+// Define the upload path
+const uploadPath = path.join(__dirname, '../uploads/users');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(uploadPath, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadPath}`);
+  } catch (err) {
+    console.error('Failed to create upload directory:', err);
+  }
+}
+ensureUploadDir();
+
+// Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/users');
-    try {
-      if (!fs.existsSync(uploadPath)) {
-        // If the directory does not exist, create it
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
-      cb(null, uploadPath);
-    } catch (err) {
-      cb(err);
-    }
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -202,7 +208,7 @@ router.get('/getUsers/unverified', async (req, res) => {
   }
 });
 
-// Route to get user data based on verified JWT token
+// Route to get user data based on verified JWT token (jasko token ho tesko info)
 router.get('/getUserData', verifyToken, async (req, res) => {
   try {
     const { email } = req.user;
@@ -241,12 +247,17 @@ router.put('/updateUserData/:id', verifyToken, upload.single("photo"), async (re
 // Update user password
 router.put('/updatePassword/:id', verifyToken, async (req, res) => {
   try {
-    const { oldpassword, password, confirmPassword } = req.body;
+    const { oldPassword, password, confirmPassword } = req.body;
 
     const user = await userRegister.findById(req.params.id);
 
+    // validate the fields
+    if (!oldPassword || !password || !confirmPassword) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
     // Check old password
-    const isMatch = await bcrypt.compare(oldpassword, user.password);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Old password did not match' });
     }

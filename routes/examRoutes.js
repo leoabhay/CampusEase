@@ -2,41 +2,54 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const nodemailer = require('nodemailer');
 const verifyToken = require('../middlewares/middleware');
 const Signup = require('../models/userModel');
 const ExcelData = require('../models/examModel');
 
-// Configure multer to store files in uploads/exams
+// Multer Configuration
+// Define the upload path
+const uploadPath = path.join(__dirname, '../uploads/exams');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(uploadPath, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadPath}`);
+  } catch (err) {
+    console.error('Failed to create upload directory:', err);
+  }
+}
+ensureUploadDir();
+
+// Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/exams');
-    try {
-      if (!fs.existsSync(uploadPath)) {
-        // If the directory does not exist, create it
-        fs.mkdirSync(uploadPath, { recursive: true });
-       fs.mkdir(uploadPath, { recursive: true }); // Ensure the folder exists
-      }
-      cb(null, uploadPath);
-    } catch (err) {
-      cb(err);
-    }
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
-// File type validation
-function checkFileType(file, cb) {
-  const filetypes = /pdf|doc|docx|xlsx/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
+// Allowed file extensions and mimetypes
+const allowedExtensions = /pdf|doc|docx|xlsx/;
+const allowedMimeTypes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
 
-  if (mimetype && extname) {
-    return cb(null, true);
+// File type validation function
+function checkFileType(file, cb) {
+  const ext = path.extname(file.originalname).toLowerCase().slice(1); // remove the dot
+  const isValidExt = allowedExtensions.test(ext);
+  const isValidMime = allowedMimeTypes.includes(file.mimetype);
+
+  if (isValidExt && isValidMime) {
+    cb(null, true);
   } else {
     cb(new Error('Only PDF, DOC, DOCX, and XLSX files are allowed!'));
   }
@@ -45,10 +58,11 @@ function checkFileType(file, cb) {
 // Multer upload middleware
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
   fileFilter: (req, file, cb) => checkFileType(file, cb)
 }).single('file');
 
+// Nodemailer transporter setup
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -57,78 +71,84 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-router.post('/upload',verifyToken, async(req, res) => {
-  upload(req, res, async(err) => {
+// Upload exam file and notify students
+router.post('/upload', verifyToken, async (req, res) => {
+  upload(req, res, async (err) => {
     if (err) {
-      res.status(400).send(err);
-    } else {
-      if (!req.file || req.file == undefined) {
-        res.status(400).send('No file selected');
-      } try {
-        const { email } = req.user;
-        //const {type,subject}=req.body;
-        const user = await Signup.findOne({ email });
-        
-  // If the user is not found, handle the error
-  if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-  }
-// Find details of all these students
-const students = await Signup.find({ role: 'student' });
-if (students.length === 0) {
-  return res.status(404).json({ message: 'No students found' });
-}
+      console.error('File upload error:', err);
+      return res.status(400).json({ message: 'File upload failed', error: err.message });
+    }
 
-const fileContent = await fs.readFile(req.file.path);
-const { type } = req.body; 
+    if (!req.file) {
+      console.warn('No file selected by user');
+      return res.status(400).json({ message: 'No file selected' });
+    }
+
+    try {
+      const { email } = req.user;
+      const { type } = req.body;
+
+      const uploader = await Signup.findOne({ email });
+      if (!uploader) {
+        return res.status(404).json({ message: 'Uploader not found' });
+      }
+
+      // Find all students
+      const students = await Signup.find({ role: 'student' });
+      if (!students.length) {
+        return res.status(404).json({ message: 'No students found' });
+      }
+
+      // Save file info to DB
       const newValuation = new ExcelData({
         type,
         filePath: req.file.path
       });
-  
       const savedValuation = await newValuation.save();
 
-      // Prepare email options for each user
-      const emailPromises = students.map(std => {
-          const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: std.email, // send to each student's email
-            subject: 'New File Uploaded',
-            text: `A new file has been uploaded with the following details:\n\nType: ${savedValuation.type}\nFile Path: ${savedValuation.filePath}`,
-            attachments: [
+      const fileContent = await fs.readFile(req.file.path);
+
+      // Prepare and send emails
+      const emailPromises = students.map((student) => {
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: student.email,
+          subject: 'New Exam File Uploaded',
+          text: `Hello ${student.name || 'Student'},\n\nA new file has been uploaded:\nType: ${type}\nPath: ${savedValuation.filePath}`,
+          attachments: [
             {
               filename: req.file.originalname,
               content: fileContent
             }
           ]
-          };
-          // Send email and return the promise
-      return transporter.sendMail(mailOptions);
-    });
+        };
+        return transporter.sendMail(mailOptions);
+      });
 
-    // Wait for all emails to be sent
-    await Promise.all(emailPromises);
+      await Promise.all(emailPromises);
 
-    console.log('Emails sent successfully');
-    res.json({
-      message: `Upload successful, email sent to ${students.length} students`,
-      data: savedValuation
-    });
-  }
-  catch (err) {
-    console.error('Error uploading file:', err);
-    res.status(500).send(err.toString());
-  }  
-}});
+      console.log(`Emails sent to ${students.length} students`);
+
+      res.status(200).json({
+        message: `File uploaded and emails sent to ${students.length} students`,
+        data: savedValuation
+      });
+    } catch (error) {
+      console.error('Error during file processing or email:', error);
+      res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+  });
 });
 
-// Get all uploaded files
+// Get uploaded exam data
 router.get('/getdata', async (req, res) => {
   try {
-    const jsonData = JSON.parse(fs.readFileSync('output.json', 'utf-8'));
+    const jsonData = JSON.parse(await fs.readFile('output.json', 'utf-8'));
     const dbData = await ExcelData.find({});
-    
-    res.json({
+
+    console.log('Data fetched successfully');
+
+    res.status(200).json({
       message: 'Data retrieved successfully',
       jsonData,
       dbData

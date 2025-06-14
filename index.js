@@ -5,6 +5,9 @@ const connectDB = require('./config/db');
 const cors = require('cors');
 const path = require('path');
 
+// Connect to database
+connectDB();
+
 // Import routes
 const academicRecordRoutes = require('./routes/academicRecordRoutes');
 const addClubRoutes = require('./routes/addClubRoutes');
@@ -23,16 +26,13 @@ const internalExamRoutes = require('./routes/internalExamRoutes');
 const internalMarksPredictRoutes = require('./routes/internalMarksPredictRoutes');
 const jobVacancyRoutes = require('./routes/jobVacancyRoute');
 const joinClubRoutes = require('./routes/joinClubRoutes');
-const otpRoutes=require('./routes/otpRoutes')
-const profileRoutes=require('./routes/profileRoutes')
-const sendemail=require('./routes/sendEmailRoutes');
-const sponsorshipRequestModel = require('./routes/sponsorshipRequestRoute');
+const otpRoutes = require('./routes/otpRoutes')
+const profileRoutes = require('./routes/profileRoutes')
+const sendEmailRoutes = require('./routes/sendEmailRoutes');
+const sponsorshipRequestRoutes = require('./routes/sponsorshipRequestRoute');
 const sponsorRoutes = require('./routes/sponsorshipRoutes');
 const userRoutes = require('./routes/userRoutes');
 
-
-// Connect to database
-connectDB();
 
 // Middleware
 app.use(cors());
@@ -59,13 +59,37 @@ app.use('/api/jobVacancy', jobVacancyRoutes);
 app.use('/api/joinClub', joinClubRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/sendemail', sendemail);
-app.use('/api/sponsorshipRequest', sponsorshipRequestModel);
+app.use('/api/sendemail', sendEmailRoutes);
+app.use('/api/sponsorshipRequest', sponsorshipRequestRoutes);
 app.use('/api/sponsorship', sponsorRoutes);
 app.use('/api/user', userRoutes);
 
 // Serve static files from the "uploads" directory
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadDirs = [
+  'assignments', 'answerAssignments', 'questions',
+  'users', 'profiles', 'exams', 'internalExams'
+];
+
+uploadDirs.forEach(dir => {
+  app.use(`/uploads/${dir}`, express.static(path.join(__dirname, `uploads/${dir}`)));
+});
+
+// Error Handler
+// 404 Not Found Handler
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack
+  });
+});
 
 // check the server
   app.get('/', (req, res) => {
@@ -73,7 +97,7 @@ app.use('/api/user', userRoutes);
   });
 
 // start server
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3200;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

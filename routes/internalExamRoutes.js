@@ -2,23 +2,32 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises; // Use promises-based API
 const nodemailer = require('nodemailer');
 const Valuation = require('../models/internalExamModel');
-const Signup= require('../models/userModel');
-const UserSubjects=require('../models/userSubjectModel');
-const Enrollment=require('../models/enrollmentModel');
+const Signup = require('../models/userModel');
+const UserSubjects = require('../models/userSubjectModel');
+const Enrollment = require('../models/enrollmentModel');
 const verifyToken = require('../middlewares/middleware');
 
-// Ensure the upload directory exists
-const uploadDir = path.join(__dirname, 'uploads/internalExams');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Multer Configuration
+// Define upload path
+const uploadDir = path.join(__dirname, '../uploads/internalExams');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadDir}`);
+  } catch (err) {
+    console.error('Failed to create upload directory:', err);
+  }
 }
+ensureUploadDir();
 
 // Multer storage config
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: async (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -27,31 +36,28 @@ const storage = multer.diskStorage({
   }
 });
 
-// File type check function
+// File type checker
 function checkFileType(file, cb) {
-  // Allowed extensions
   const filetypes = /pdf|doc|docx/;
-  // Check extension
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  // Check mime type
   const mimetype = filetypes.test(file.mimetype);
-
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb(new Error('Error: PDFs and Word Documents Only!'));
+    cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
   }
 }
 
-// Multer upload middleware
+// Multer middleware
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb);
   }
 }).single('file');
 
+// Nodemailer config
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -60,92 +66,93 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Route to upload internal exam files and notify students
-router.post('/internalUpload',verifyToken, async(req, res) => {
-    upload(req, res, async(err) => {
-      if (err) {
-        res.status(400).send(err);
-      } else {
-        if (!req.file || req.file == undefined) {
-          res.status(400).send('No file selected');
-        } try {
-          const { email } = req.user;
-          const {type,subject}=req.body;
-          const user = await Signup.findOne({ email });
-          
-    // If the user is not found, handle the error
-    if (!user) {
+// Upload internal exam file and send email
+router.post('/internalUpload', verifyToken, async (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) {
+      console.error('Multer error:', err.message);
+      return res.status(400).json({ message: 'File upload error', error: err.message });
+    }
+
+    if (!req.file) {
+      console.warn('No file received in request');
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    try {
+      const { email } = req.user;
+      const { type, subject } = req.body;
+
+      console.log(`Upload request by: ${email} | Subject: ${subject} | Type: ${type}`);
+
+      const user = await Signup.findOne({ email });
+      if (!user) {
         return res.status(404).json({ message: 'User not found' });
-    }
-     // Find the enrollment details based on the teacher's name
-     const enrollment= await Enrollment.findOne({ "subjects.teacher": user.email });
-    
-     if (!enrollment) {
-         return res.status(404).json({ message: 'Enrollment not found' });
-     }
-     // Extract the subjects taught by this teacher
-     const subjectsTaught = enrollment.subjects
-     .filter(subjectt => subjectt.teacher === user.email && subjectt.name === subject )
-     .map(subjectt => subjectt.name);
+      }
 
-    if (subjectsTaught.length === 0) {
-      return res.status(404).json({ message: 'No subjects found for this teacher' });
-    } 
-    const student = await UserSubjects.find({ "subjects.name": { $in: subjectsTaught } });
-    if (student.length === 0) {
-      return res.status(404).json({ message: 'No students found for this subject' });
-    }
-    // Extract user emails from the student records
-const studentEmails = student.map(students => students.userEmail);
+      const enrollment = await Enrollment.findOne({ "subjects.teacher": user.email });
+      if (!enrollment) {
+        return res.status(404).json({ message: 'Enrollment not found for teacher' });
+      }
 
-// Find details of all these students
-const users = await Signup.find({ email: { $in: studentEmails } });
-    if(!users || users.length === 0){
-      return res.status(404).json({ message: 'No students found for this teacher' });
-    }
-  //return res.status(200).json({message:'Enrolled students in are:',  users  });
-  const fileContent = await fs.readFile(req.file.path);
+      const subjectsTaught = enrollment.subjects
+        .filter(subj => subj.teacher === user.email && subj.name === subject)
+        .map(subj => subj.name);
 
-        const newValuation = new Valuation({
-          type,
-          filePath: req.file.path,
-          subject
-        });
-    
-        const savedValuation = await newValuation.save();
+      if (subjectsTaught.length === 0) {
+        return res.status(404).json({ message: 'No matching subjects found for teacher' });
+      }
 
-        // Prepare email options for each user
-        const emailPromises = users.map(user => {
-            const mailOptions = {
-              from: 'karthikpokharel@gmail.com',
-              to: user.email,
-              subject: 'New File Uploaded',
-              text: `A new file has been uploaded with the following details:\n\nType: ${savedValuation.type}\nFile Path: ${savedValuation.filePath}`,
-              attachments: [
-              {
-                filename: req.file.originalname,
-                content: fileContent
-              }
-            ]
-            };
-            // Send email and return the promise
-        return transporter.sendMail(mailOptions);
+      const students = await UserSubjects.find({ "subjects.name": { $in: subjectsTaught } });
+      if (students.length === 0) {
+        return res.status(404).json({ message: 'No students enrolled in this subject' });
+      }
+
+      const studentEmails = students.map(s => s.userEmail);
+      const userDetails = await Signup.find({ email: { $in: studentEmails } });
+
+      if (!userDetails || userDetails.length === 0) {
+        return res.status(404).json({ message: 'No student details found' });
+      }
+
+      // Save valuation record
+      const savedValuation = await new Valuation({
+        type,
+        subject,
+        filePath: req.file.path
+      }).save();
+
+      const fileContent = await fs.readFile(req.file.path);
+
+      const emailPromises = userDetails.map(student => {
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: student.email,
+          subject: 'New Internal Exam File Uploaded',
+          text: `Dear ${student.fullName || 'Student'},\n\nA new internal exam file has been uploaded.\n\nSubject: ${subject}\nType: ${type}`,
+          attachments: [{
+            filename: req.file.originalname,
+            content: fileContent
+          }]
+        };
+
+        return transporter.sendMail(mailOptions)
+          .then(() => console.log(`Email sent to: ${student.email}`))
+          .catch(err => console.error(`Failed to send email to ${student.email}:`, err));
       });
 
-      // Wait for all emails to be sent
       await Promise.all(emailPromises);
 
-      console.log('Emails sent successfully');
-      res.json({
-        message: `Upload successful, email sent to ${users.length} users`,
+      res.status(201).json({
+        message: `File uploaded and email sent to ${userDetails.length} students.`,
         data: savedValuation
       });
+
+    } catch (err) {
+      console.error('Error during upload and email process:', err);
+      res.status(500).json({ message: 'Internal server error', error: err.message });
     }
-    catch (err) {
-      console.error('Error uploading file:', err);
-      res.status(500).send(err.toString());
-    }  
-  }});
+  });
 });
 
 module.exports = router;

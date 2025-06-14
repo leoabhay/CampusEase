@@ -1,30 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const answerAssignment = require('../models/answerAssignmentModel')
-const giveAssignmentModel = require('../models/giveAssignmentModel')
 const multer = require('multer');
-const verifyToken=require('../middlewares/middleware')
+const path = require('path');
+const fs = require('fs').promises;
+
+const verifyToken = require('../middlewares/middleware');
+const answerAssignment = require('../models/answerAssignmentModel');
+const giveAssignmentModel = require('../models/giveAssignmentModel');
 const Signup = require('../models/userModel');
-const Enrollment=require('../models/enrollmentModel');
+const Enrollment = require('../models/enrollmentModel');
 const UserSubjects = require('../models/userSubjectModel');
 const Students = require('../models/otpModel');
-const fs = require('fs');
-const path = require('path');
+
+// Multer Configuration
+// Define the upload path
+const uploadPath = path.join(__dirname, '../uploads/answerAssignments');
+
+// Ensure upload directory exists
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(uploadPath, { recursive: true });
+    console.log(`Upload directory ensured at: ${uploadPath}`);
+  } catch (err) {
+    console.error('Failed to create upload directory:', err);
+  }
+}
+ensureUploadDir();
 
 // Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/assignments');
-    try {
-      if (!fs.existsSync(uploadPath)) {
-        // If the directory does not exist, create it
-        fs.mkdirSync(uploadPath, { recursive: true });
-      fs.mkdir(uploadPath, { recursive: true }); // create folder if doesn't exist
-    }
     cb(null, uploadPath);
-    } catch (err) {
-      cb(err);
-    }
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -33,28 +39,20 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Create a new assignment submission
+// Submit a new assignment
 router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"), async (req, res) => {
   try {
     const { rollno } = req.user;
     const { subject, assignment } = req.body;
     const file = req.file;
 
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const existingAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment }).lean().exec();
+    const existingAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment });
+    if (!existingAssignment) return res.status(404).json({ error: 'Assignment not found' });
 
-    if (!existingAssignment) {
-      return res.status(404).json({ error: 'Assignment not found' });
-    }
-
-    const alreadySubmittedAssignment = await answerAssignment.findOne({ rollno, subject, assignment }).lean().exec();
-
-    if (alreadySubmittedAssignment) {
-      return res.status(400).json({ error: 'Assignment already submitted' });
-    }
+    const alreadySubmitted = await answerAssignment.findOne({ rollno, subject, assignment });
+    if (alreadySubmitted) return res.status(409).json({ error: 'Assignment already submitted' });
 
     const dueDate = new Date(existingAssignment.dueDate);
     const submittedDate = Date.now();
@@ -68,240 +66,191 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     });
 
     await newAssignment.save();
-
     const status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
-    res.status(201).json({ message: "Assignment submitted successfully.", newAssignment, status: status });
+
+    console.log(`Assignment submitted by rollno ${rollno}`);
+    res.status(201).json({ message: 'Assignment submitted successfully.', newAssignment, status });
   } catch (error) {
-    console.error('Error creating assignment:', error);
-    return res.status(500).json({ message: 'Error creating assignment', error });
+    console.error('Error submitting assignment:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-  // Get all assignments
-  router.get('/getassignments', async (req, res) => {
-    try {
-      const assignments = await answerAssignment.find();
-      res.json(assignments);
-    } catch (error) {
-      res.status(500).json({ message: 'Error fetching assignments', error });
-    }
-  });
-  
-  // Get assignment by ID
-  router.get('/getassignments/:id', async (req, res) => {
-    try {
-      const assignment = await answerAssignment.findById(req.params.id);
-      if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
-      res.json(assignment);
-    } catch (error) {
-      res.status(500).json({ message: 'Error fetching assignment', error });
-    }
-  });
-  
-// Get assignments by user email
-  router.get('/getassignmentsbyemail', verifyToken, async (req, res) => {
-    try {
-      const { email } = req.user;
-      const user = await Signup.findOne({ email });
-  
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      const assignments = await answerAssignment.find({ rollno: user.rollno }).lean().exec();
-  
-      if (!assignments || assignments.length === 0) {
-        return res.status(404).json({ message: 'No assignments found' });
-      }
-  
-      // Fetch corresponding give assignments and calculate status
-      const assignmentPromises = assignments.map(async (assignment) => {
-        const giveAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment.assignment }).lean().exec();
-        
-        if (giveAssignment) {
-          const dueDate = new Date(giveAssignment.dueDate);
-          const submittedDate = new Date(assignment.submitteddate);
-          assignment.status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
-        } else {
-          assignment.status = 'Assignment details not found';
-        }
-  
-        return assignment;
-      });
-  
-      const assignmentsWithStatus = await Promise.all(assignmentPromises);
-  
-      res.json({ Assignment: assignmentsWithStatus });
-  
-    } catch (error) {
-      console.error('Error fetching assignments:', error);
-      res.status(500).json({ message: 'Error fetching assignments', error: error.message });
-    }
-  });
-
-// Get assignments by subject taught by the teacher
-  router.get('/getassignmentsbysubject', verifyToken, async (req, res) => {
-    try {
-        const { email } = req.user;
-        const user = await Signup.findOne({ email });
-  
-        // If the user is not found, handle the error
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-         // Find the enrollment details based on the teacher's name
-         const enrollment= await Enrollment.findOne({ "subjects.teacher": user.email });
-        
-         if (!enrollment) {
-             return res.status(404).json({ message: 'Enrollment not found' });
-         }
-         // Extract the subjects taught by this teacher
-         const subjectsTaught = enrollment.subjects
-         .filter(subject => subject.teacher === user.email)
-         .map(subject => subject.name);
-
-        if (subjectsTaught.length === 0) {
-        return res.status(404).json({ message: 'No subjects found for this teacher' });
-          }                               
-
-        // Find assignments for the subjects taught by this teacher
-        const assignment = await answerAssignment.find({ subject: { $in: subjectsTaught } });
-
-        
-         // Check if assignment is an empty array
-        if (!assignment || assignment.length === 0) {
-          return res.status(404).json({ message: 'No assignment found' });
-        }
-        res.json({ Assignment: assignment });
-       
-    } catch (error) {
-        console.error('Error fetching assignment:', error); // Log the error
-        res.status(500).json({ message: 'Error fetching assignment', error: error.message });
-    }
-  });
-
-
-  // Update
-  router.put('/putassignments/:id', upload.single('assignmentFile'), async (req, res) => {
-    try {
-      const { subject, assignment, rollno, remarks } = req.body;
-      const updateData = { subject, assignment, rollno, remarks };
-      if (req.file) updateData.file = req.file.path;
-  
-      const updatedAssignment = await answerAssignment.findByIdAndUpdate(req.params.id, updateData, { new: true });
-      if (!updatedAssignment) return res.status(404).json({ message: 'Assignment not found' });
-  
-      res.json(updatedAssignment);
-    } catch (error) {
-      res.status(500).json({ message: 'Error updating assignment', error });
-    }
-  });
-  
-  // Delete assignment by ID
-  router.delete('/delassignments/:id', async (req, res) => {
-    try {
-      const deletedAssignment = await answerAssignment.findByIdAndDelete(req.params.id);
-      if (!deletedAssignment) return res.status(404).json({ message: 'Assignment not found' });
-  
-      res.json({ message: 'Assignment deleted', deletedAssignment });
-    } catch (error) {
-      res.status(500).json({ message: 'Error deleting assignment', error });
-    }
-  });
-
-// Filter students by name, email or roll number
-router.get('/students/search', verifyToken, async (req, res) => {
+// Get all answered assignments
+router.get('/getassignments', async (req, res) => {
   try {
-    const { name, rollno , email } = req.query;
-
-    // Build the query object based on the provided parameters
-    const query = {};
-    if (name) {
-      query.name = name;
-    }
-    if (email) {
-      query.email = email;
-    }
-    if (rollno) {
-      query.rollno = rollno;
-    }
-    // Ensure at least one parameter is provided
-    if (!name && !rollno && !email) {
-      return res.status(400).json({ message: 'At least one of name,email or roll number must be provided' });
-    }
-
-    const students = await userRegister.find(query).lean().exec();
-    if (!students || students.length === 0) {
-      return res.status(404).json({ message: 'No students found' });
-    }
-   const assignment=await answerAssignment.find(query).lean().exec();
-   if (!assignment || assignment.length === 0) {
-    return res.status(404).json({ message: 'No assignment found for this student' });
+    const assignments = await answerAssignment.find();
+    res.status(200).json(assignments);
+  } catch (error) {
+    console.error('Error fetching assignments:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
+});
+
+// Get a single assignment by ID
+router.get('/getassignments/:id', async (req, res) => {
+  try {
+    const assignment = await answerAssignment.findById(req.params.id);
+    if (!assignment) return res.status(404).json({ message: 'Assignment not found' });
     res.status(200).json(assignment);
   } catch (error) {
-    console.error('Error fetching students:', error);
-    res.status(500).json({ message: 'Error fetching students', error: error.message });
+    console.error('Error fetching assignment by ID:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-
-// Function to search student data
-async function searchStudent(query) {
+/**
+ * GET /getassignmentsbyemail
+ * Get assignments submitted by a student using email from token
+ */
+router.get('/getassignmentsbyemail', verifyToken, async (req, res) => {
   try {
-      // Destructure query to get the actual search value
-      const { email, rollno, name } = query;
+    const { email } = req.user;
+    const user = await Signup.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-      // Construct search criteria based on the provided query parameter
-      const searchCriteria = {};
-      if (email) searchCriteria.email = email;
-      if (rollno) searchCriteria.rollno = rollno;
-      if (name) searchCriteria.name = name;
+    const assignments = await answerAssignment.find({ rollno: user.rollno });
+    if (!assignments.length) return res.status(404).json({ message: 'No assignments found' });
 
-      // Search in Register model
-      const registerData = await Signup.findOne(searchCriteria).lean();
-
-      if (!registerData) {
-          return { message: 'Student not found' };
+    const assignmentsWithStatus = await Promise.all(assignments.map(async (assignment) => {
+      const given = await giveAssignmentModel.findOne({ assignmentName: assignment.assignment });
+      if (given) {
+        const dueDate = new Date(given.dueDate);
+        const submittedDate = new Date(assignment.submitteddate);
+        assignment.status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
+      } else {
+        assignment.status = 'Assignment details not found';
       }
+      return assignment;
+    }));
 
-      const { email: studentEmail, rollno: studentRollno } = registerData;
-
-      // Search in Students model (attendance)
-      const attendanceData = await Students.find({ email: studentEmail }).lean();
-
-      // Search in UserSubjects model (enrolled subjects)
-      const subjectsData = await UserSubjects.findOne({ userEmail: studentEmail }).lean();
-
-      // Search in Answer_Assignment model (uploaded assignments)
-      const assignmentsData = await answerAssignment.find({ rollno: studentRollno }).lean();
-
-      return {
-          registerData,
-          attendanceData,
-          subjectsData,
-          assignmentsData
-      };
+    res.status(200).json({ assignments: assignmentsWithStatus });
   } catch (error) {
-      console.error('Error searching student data:', error);
-      return { message: 'Error searching student data', error };
+    console.error('Error fetching assignments by email:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
-}
+});
 
-// Route to search for student data
+/**
+ * GET /getassignmentsbysubject
+ * Get assignments submitted for subjects handled by the logged-in teacher
+ */
+router.get('/getassignmentsbysubject', verifyToken, async (req, res) => {
+  try {
+    const { email } = req.user;
+    const user = await Signup.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const enrollment = await Enrollment.findOne({ "subjects.teacher": email });
+    if (!enrollment) return res.status(404).json({ message: 'Enrollment not found' });
+
+    const subjectsTaught = enrollment.subjects
+      .filter(sub => sub.teacher === email)
+      .map(sub => sub.name);
+
+    if (!subjectsTaught.length) return res.status(404).json({ message: 'No subjects assigned to this teacher' });
+
+    const assignments = await answerAssignment.find({ subject: { $in: subjectsTaught } });
+    if (!assignments.length) return res.status(404).json({ message: 'No assignments found' });
+
+    res.status(200).json({ assignments });
+  } catch (error) {
+    console.error('Error fetching assignments by subject:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+// Update an assignment record by ID
+router.put('/putassignments/:id', upload.single('assignmentFile'), async (req, res) => {
+  try {
+    const { subject, assignment, rollno, remarks } = req.body;
+    const updateData = { subject, assignment, rollno, remarks };
+    if (req.file) {
+      updateData.assignmentFile = `http://localhost:3200/uploads/assignments/${req.file.filename}`;
+    }
+
+    const updatedAssignment = await answerAssignment.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!updatedAssignment) return res.status(404).json({ message: 'Assignment not found' });
+
+    res.status(200).json(updatedAssignment);
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+// Delete an assignment by ID
+router.delete('/delassignments/:id', async (req, res) => {
+  try {
+    const deleted = await answerAssignment.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Assignment not found' });
+
+    res.status(200).json({ message: 'Assignment deleted', deletedAssignment: deleted });
+  } catch (error) {
+    console.error('Error deleting assignment:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+/**
+ * GET /students/search
+ * Filter students by name, email or roll number
+ */
+router.get('/students/search', verifyToken, async (req, res) => {
+  try {
+    const { name, rollno, email } = req.query;
+    if (!name && !rollno && !email) {
+      return res.status(400).json({ message: 'At least one of name, email or roll number must be provided' });
+    }
+
+    const query = {};
+    if (name) query.name = name;
+    if (email) query.email = email;
+    if (rollno) query.rollno = rollno;
+
+    const students = await Signup.find(query);
+    if (!students.length) return res.status(404).json({ message: 'No students found' });
+
+    const assignments = await answerAssignment.find({ rollno: query.rollno || students[0].rollno });
+    if (!assignments.length) return res.status(404).json({ message: 'No assignments found for this student' });
+
+    res.status(200).json(assignments);
+  } catch (error) {
+    console.error('Error fetching student assignments:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+/**
+ * POST /search-student
+ * Returns full profile of a student: register, subjects, assignments, attendance
+ */
 router.post('/search-student', async (req, res) => {
   const query = req.body.query;
 
   if (!query || (!query.email && !query.rollno && !query.name)) {
-      return res.status(400).json({ message: 'Query parameter is required' });
+    return res.status(400).json({ message: 'Query parameter is required' });
   }
 
   try {
-      const result = await searchStudent(query);
-      res.json(result);
+    const { email, rollno, name } = query;
+    const searchCriteria = {};
+    if (email) searchCriteria.email = email;
+    if (rollno) searchCriteria.rollno = rollno;
+    if (name) searchCriteria.name = name;
+
+    const registerData = await Signup.findOne(searchCriteria).lean();
+    if (!registerData) return res.status(404).json({ message: 'Student not found' });
+
+    const attendanceData = await Students.find({ email: registerData.email }).lean();
+    const subjectsData = await UserSubjects.findOne({ userEmail: registerData.email }).lean();
+    const assignmentsData = await answerAssignment.find({ rollno: registerData.rollno }).lean();
+
+    res.status(200).json({ registerData, attendanceData, subjectsData, assignmentsData });
   } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+    console.error('Error searching student data:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 
-  module.exports = router;
+module.exports = router;
