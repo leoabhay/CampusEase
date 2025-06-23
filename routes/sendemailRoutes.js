@@ -9,8 +9,8 @@ const bcrypt=require('bcrypt');
 const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
-        user: 'abhaycdry10@gmail.com',
-        pass: 'mdbz ukya qknq nfwp',
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
     }
 });
 
@@ -23,7 +23,7 @@ function sendVerificationEmail(user) {
     const verificationUrl = `http://localhost:3200/verify-signup?token=${token}`;
     
     const mailOptions = {
-        from: 'abhaycdry10@gmail.com',
+        from: process.env.EMAIL_USER,
         to: user.email,
         subject: 'Email Verification for Signup',
         text: `Please click the following link to verify your login: ${verificationUrl}`
@@ -189,7 +189,7 @@ router.post('/request-reset-password', async (req, res) => {
     const resetUrl = `http://localhost:3200/reset-password?token=${token}`;
 
     const mailOptions = {
-        from: 'abhaycdry10@gmail.com',
+        from: process.env.EMAIL_USER,
         to: user.email,
         subject: 'Password Reset',
         text: `Please click the following link to reset your password: ${resetUrl}`

@@ -37,13 +37,13 @@ async function sendOtp(email, otp, date) {
     let transporter = nodemailer.createTransport({
         service: 'Gmail',
         auth: {
-            user: 'abhaycdry10@gmail.com',
-            pass: 'mdbz ukya qknq nfwp',
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
         }
     });
 
     let mailOptions = {
-        from: 'abhaycdry10@gmail.com',
+        from: process.env.EMAIL_USER,
         to: email,
         subject: 'Your OTP for Attendance',
         text: `Your OTP is ${otp}. Please enter this to mark your attendance.\n ${date}`,

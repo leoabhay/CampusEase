@@ -40,8 +40,8 @@ function checkFileType(file, cb) {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'abhaycdry10@gmail.com',
-    pass: 'mdbz ukya qknq nfwp',
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   }
 });
 
@@ -79,7 +79,7 @@ const { type } = req.body;
       // Prepare email options for each user
       const emailPromises = students.map(std => {
           const mailOptions = {
-            from: 'abhaycdry10@gmail.com',
+            from: process.env.EMAIL_USER,
             to: std.email,
             subject: 'New File Uploaded',
             text: `A new file has been uploaded with the following details:\n\nType: ${savedValuation.type}\nFile Path: ${savedValuation.filePath}`,

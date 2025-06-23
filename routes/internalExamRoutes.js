@@ -40,8 +40,8 @@ function checkFileType(file, cb) {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'abhaycdry10@gmail.com',
-    pass: 'mdbz ukya qknq nfwp',
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -87,7 +87,7 @@ const transporter = nodemailer.createTransport({
 //         newValuation.save()
 //           .then(valuation => {
 //             const mailOptions = {
-//               from: 'abhaycdry10@gmail.com',
+//               from: process.env.EMAIL_USER,
 //               to: userEmails,
 //               subject: 'New File Uploaded',
 //               text: `A new file has been uploaded with the following details:\n\nType: ${valuation.type}\nFile Path: ${valuation.filePath}`,
@@ -173,7 +173,7 @@ const users = await Signup.find({ email: { $in: studentEmails } });
         // Prepare email options for each user
         const emailPromises = users.map(user => {
             const mailOptions = {
-              from: 'abhaycdry10@gmail.com',
+              from: process.env.EMAIL_USER,
               to: user.email,
               subject: 'New File Uploaded',
               text: `A new file has been uploaded with the following details:\n\nType: ${savedValuation.type}\nFile Path: ${savedValuation.filePath}`,

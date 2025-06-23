@@ -4,12 +4,6 @@ const router = express.Router();
 const createDepartmentListModel = require('../models/createDepartmentModel');
 const verifyToken = require('../middleware');
 
-
-
-
-
-
-
 router.post('/postDepartments', async (req, res) => {
     try {
         const existingDepartment = await createDepartmentListModel.findOne({ hod: req.body.hod });

@@ -2,9 +2,9 @@ const mongoose= require('mongoose');
 const mongodb = require ('mongodb');
 
 mongoose
-.connect("mongodb+srv://abhaycdry10:Abhay123andres@cluster0.lresqtr.mongodb.net/")
+.connect(process.env.MONGO_URI)
  .then(()=>{
-    console.log('Database is connected successfully');
+    console.log(`Database connected successfully at ${process.env.MONGO_URI}`);
    
  })
  .catch((error)=>{
