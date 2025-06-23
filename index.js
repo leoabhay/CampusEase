@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const connectdb = require('./db');
 const cors = require('cors');
 
-const path = require('path'); 
+const path = require('path');
+
 const userRoutes= require('./routes/userRoute')
 const discussion= require('./routes/discussionRoutes')
 const joinClub= require('./routes/joinClubRoutes')
@@ -30,6 +32,8 @@ const sendemail=require('./routes/sendemailRoutes');
 
 app.use(express.json());
 app.use(cors());
+
+// routes
 app.use(userRoutes);
 app.use(discussion);
 app.use(joinClub);
@@ -54,9 +58,10 @@ app.use(idCard);
 app.use(excelRoutes);
 app.use(sendemail);
 
-  // Serve static files from the "uploads" directory
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files from the "uploads" directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.listen(3200,()=>{
-    console.log('LocalHost is connected');
-})
+// start the server
+app.listen(process.env.PORT || 3200, () => {
+    console.log(`Server is running on port ${process.env.PORT || 5000}`);
+});

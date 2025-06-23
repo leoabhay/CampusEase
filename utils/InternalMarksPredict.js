@@ -1,6 +1,6 @@
 const Assignment = require('../models/giveAssignmentModel');
 const AnswerAssignment = require('../models/answerAssignmentModel');
-const InternalMarks = require('../models/internalMarls-calculationModel');
+const InternalMarks = require('../models/internalMarks-calculationModel');
 
 async function calculateAndUpdateInternalMarks() {
     try {
