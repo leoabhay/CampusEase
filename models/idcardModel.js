@@ -9,7 +9,11 @@ const idcardSchema= new mongoose.Schema({
     department: { type: String, required:true},
     validuntil:{ type: String},
     reason:{ type: String, required:true},
-    photo:{type : String}
+    photo:{type : String},
+      isPaid: {
+    type: Boolean,
+    default: false,  // default unpaid
+  },
 })
 const IdCard = mongoose.model('IdCard', idcardSchema)
 module.exports = IdCard;

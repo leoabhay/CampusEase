@@ -105,7 +105,7 @@ router.post('/signin', async (req, res) => {
         // const token = jwt.sign({ email: userData.email }, 'secretKey');
         const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , userRole: userData.role }, 'secretKey');
 
-        res.json({ message: 'Login Sucessfull', user: userData, token: token });
+        res.json({ message: 'Login Sucessfull', role: userRole, token: token });
     }
     catch (error) {
       res.status(500).json({ message: 'something went wrong', error: error.stack });
@@ -137,31 +137,16 @@ router.get('/getuserdata', verifyToken, async (req, res) =>{
     }
 })
 
+
 router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res) => {
   try {
-    const { address, biography, facebook, instagram, whatsapp, website } = req.body;
+    const { address } = req.body;
     const file = req.file;
 
     const updateData = {};
 
     if (address && address !== "") {
       updateData.address = address;
-    }
-    // Add other fields similarly
-    if (biography && biography !== "") {
-      updateData.biography = biography;
-    }
-    if (facebook && facebook !== "") {
-      updateData.facebook = facebook;
-    }
-    if (instagram && instagram !== "") {
-      updateData.instagram = instagram;
-    }
-    if (whatsapp && whatsapp !== "") {
-      updateData.whatsapp = whatsapp;
-    }
-    if (website && website !== "") {
-      updateData.website = website;
     }
 
     if (file) {
@@ -183,29 +168,41 @@ router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res
 
 router.put('/password/:id', verifyToken, async (req, res) => {
   try {
-    const {oldpassword, password,confirmPassword}=req.body;
-    const user= await userRegister.findById(req.params.id);
-  if(user.password != oldpassword){
-    return res.status(400).json({ error: 'Password did not match' });
-  }
-  else{
-    if(password != confirmPassword){
-      return res.status(404).json({ error: 'New Password did not match' });
-    }else{
-      const userData= { password,confirmPassword };
-      const updateduserdata = await userRegister.findByIdAndUpdate(
-        req.params.id,
-        userData,
-        { new: true }
-    );
-    res.json({ message: 'Password updated successfully', userdata: updateduserdata });
-  
+    const { oldpassword, password, confirmPassword } = req.body;
+
+    // Fetch user by ID
+    const user = await userRegister.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-      }
-        } catch (error) {
-      res.status(500).json({ message: 'Something went wrong', error });
+
+    // Compare old password with hashed password in DB
+    const isMatch = await bcrypt.compare(oldpassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Old password is incorrect' });
+    }
+
+    // Check if new passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'New password did not match' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update password in DB
+    const updatedUser = await userRegister.findByIdAndUpdate(
+      req.params.id,
+      { password: hashedPassword, confirmPassword: hashedPassword }, // optional to store confirmPassword
+      { new: true }
+    );
+
+    res.json({ message: 'Password updated successfully', userdata: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Something went wrong', error });
   }
 });
+
 
 router.delete('/user/:id', verifyToken,async (req, res) => {
   try {
@@ -256,5 +253,3 @@ router.get('/students/search', verifyToken, async (req, res) => {
 
 
 module.exports = router;
-
-

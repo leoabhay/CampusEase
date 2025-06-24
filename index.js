@@ -30,6 +30,7 @@ const InternalMarksPredictRoutes=require('./routes/InternalMarksPredictRoutes');
 const idCard=require('./routes/idcardRoutes');
 const sendemail=require('./routes/sendemailRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
+
 app.use(express.json());
 app.use(cors());
 

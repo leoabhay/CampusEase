@@ -23,12 +23,7 @@ const storage = multer.diskStorage({
       const profileData = {
         photo: req.file ? req.file.filename : '',
         rollno: rollno,
-        address: req.body.address,
-        biography: req.body.biography,
-        facebook: req.body.facebook,
-        instagram: req.body.instagram,
-        whatsapp: req.body.whatsapp,
-        website: req.body.website,
+        address: req.body.address
       };
   
       const newProfile = new Profile(profileData);

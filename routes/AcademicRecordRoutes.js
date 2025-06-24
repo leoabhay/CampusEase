@@ -83,7 +83,7 @@ router.put('/putAcademicRecord/:id', verifyToken, async (req, res) => {
   });
   
   // Delete
-  router.delete('/delAcademicRecord:id', verifyToken, async (req, res) => {
+  router.delete('/delAcademicRecord/:id', verifyToken, async (req, res) => {
     try {
       const deletedAcademicRecord = await AcademicRecord.findByIdAndDelete(req.params.id);
       if (!deletedAcademicRecord) return res.status(404).json({ message: 'AcademicRecord not found' });

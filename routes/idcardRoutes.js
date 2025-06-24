@@ -134,15 +134,75 @@ router.get('/idcard', verifyToken,async(req,res)=>{
   }
 });
 
-router.put('/IDCardUpdate/:id', async (req, res) => {
+router.delete('/deleteIdCard/:id', async (req, res) => {
     try {
-      const { validuntil } = req.body;
-      const updatedEnrollment = await IdCard.findByIdAndUpdate(req.params.id, {
-        validuntil
-      }, { new: true });
-      res.json({message:"Updated succesfully!",updatedEnrollment});
-    } catch (err) {
-      res.status(400).json({ message: err.message });
+      const deletedIdCard = await IdCard.findByIdAndDelete(req.params.id);
+      if (!deletedIdCard) return res.status(404).json({ message: 'IdCard not found' });
+      res.json({ message: 'IdCard deleted', deletedIdCard });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting IdCard', error });
     }
   });
+
+// Approve payment (set isPaid to true)
+router.post('/approvePayment/:id', async (req, res) => {
+  try {
+    const updatedCard = await IdCard.findByIdAndUpdate(
+      req.params.id,
+      { isPaid: true },
+      { new: true }
+    );
+
+    if (!updatedCard) {
+      return res.status(404).json({ message: 'IdCard not found' });
+    }
+
+    res.json({ message: 'Payment approved', updatedCard });
+  } catch (error) {
+    res.status(500).json({ message: 'Error approving payment', error: error.message });
+  }
+});
+
+// Decline payment (set isPaid to false)
+router.post('/declinePayment/:id', async (req, res) => {
+  try {
+    const updatedCard = await IdCard.findByIdAndUpdate(
+      req.params.id,
+      { isPaid: false },
+      { new: true }
+    );
+
+    if (!updatedCard) {
+      return res.status(404).json({ message: 'IdCard not found' });
+    }
+
+    res.json({ message: 'Payment declined', updatedCard });
+  } catch (error) {
+    res.status(500).json({ message: 'Error declining payment', error: error.message });
+  }
+});
+
+
+router.put('/IDCardUpdate/:id', async (req, res) => {
+  console.log('PUT /IDCardUpdate called with id:', req.params.id);
+  console.log('Request body:', req.body);
+
+  try {
+    const updatedCard = await IdCard.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updatedCard) {
+      return res.status(404).json({ message: 'ID card not found' });
+    }
+
+    res.json({ message: "Updated successfully!", updatedCard });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+
 module.exports = router;
