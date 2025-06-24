@@ -1,29 +1,29 @@
 const express = require('express');
 const router = express.Router();
-// const Student = require('../models/otpModel')
 const Student = require('../models/otpModel');
 const nodemailer = require('nodemailer');
-const verifyToken= require('../middleware');
+const verifyToken = require('../middleware');
 
+// Haversine formula for location distance
 function haversineDistance(coords1, coords2) {
     function toRad(x) {
         return x * Math.PI / 180;
     }
 
-    const R = 6371; // Radius of the Earth in km
+    const R = 6371; // Radius of Earth in km
     const dLat = toRad(coords2.latitude - coords1.latitude);
     const dLon = toRad(coords2.longitude - coords1.longitude);
     const lat1 = toRad(coords1.latitude);
     const lat2 = toRad(coords2.latitude);
 
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c;
     return d;
 }
 
-
+// Generate 6-digit OTP
 function generateOtp(length = 6) {
     const digits = '0123456789';
     let otp = '';
@@ -33,6 +33,7 @@ function generateOtp(length = 6) {
     return otp;
 }
 
+// Send OTP via email
 async function sendOtp(email, otp, date) {
     let transporter = nodemailer.createTransport({
         service: 'Gmail',
@@ -46,40 +47,55 @@ async function sendOtp(email, otp, date) {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'Your OTP for Attendance',
-        text: `Your OTP is ${otp}. Please enter this to mark your attendance.\n ${date}`,
-        
+        html: `
+  <div style="font-family: Arial, sans-serif; color: #333;">
+    <h2 style="color: #2E86C1;">Attendance OTP Verification</h2>
+    <p>Hello,</p>
+    <p>Your <strong>One-Time Password (OTP)</strong> to mark attendance is:</p>
+    <h1 style="color: #27AE60;">${otp}</h1>
+    <p>Please enter this OTP in the attendance system to confirm your presence for the date: <strong>${date}</strong>.</p>
+    <p style="font-size: 0.9em; color: #888;">If you did not request this OTP, please ignore this email.</p>
+    <br />
+    <p>Thank you,<br />` + process.env.EMAIL_USER + `</p>
+  </div>
+`
+
     };
 
     await transporter.sendMail(mailOptions);
 }
 
-// router.post('/send-otp', async (req, res) => {
-//     const currentDate = new Date();
-//     const formattedDate = currentDate.toDateString(); // Format as 'Fri Jun 07 2024'
+// Send OTP (Upsert – avoid duplicates)
+router.post('/send-otp', verifyToken, async (req, res) => {
+    const currentDate = new Date();
+    const formattedDate = currentDate.toDateString();
 
-//     const { email } = req.body;
-//     const otp = generateOtp();
-//    // const {date} = formattedDate;
-//     //console.log(date);
-//     try {
-//         const student = await Student.findOneAndUpdate(
-//             { email },
-//             //{ date: formattedDate},
-//             { otp, otpExpiration: Date.now() + 5 * 60 * 1000, present: false, 
-//                 date: formattedDate  }, 
-//             //{present:false},
-//             { upsert: true, new: true }
-            
-//         );
-//         await sendOtp(email, otp, formattedDate);
-//         res.status(200).send('OTP sent');
+    const { email, location } = req.body;
+    const otp = generateOtp();
 
-//     } catch (err) {
-//         console.error('Error generating OTP:', err);
-//         res.status(500).send('Error generating OTP');
-//     }
-// });
+    try {
+        const student = await Student.findOneAndUpdate(
+            { email, date: formattedDate },
+            {
+                otp,
+                otpExpiration: Date.now() + 5 * 60 * 1000,
+                present: false,
+                latitude: location.latitude,
+                longitude: location.longitude
+            },
+            { upsert: true, new: true }
+        );
 
+        await sendOtp(email, otp, formattedDate);
+        console.log(`OTP sent to ${email}: ${otp}`);
+        res.status(200).send('OTP sent');
+    } catch (err) {
+        console.error('Error generating OTP:', err);
+        res.status(500).send('Error generating OTP');
+    }
+});
+
+// Verify OTP & Location
 router.post('/verify-otp', verifyToken, async (req, res) => {
     const { email, otp, location } = req.body;
     const currentDate = new Date();
@@ -87,88 +103,85 @@ router.post('/verify-otp', verifyToken, async (req, res) => {
 
     try {
         const student = await Student.findOne({ email, otp, date: formattedDate });
-        if (student) {
-            const otpLocation = {
-                latitude: student.latitude,
-                longitude: student.longitude
-            };
 
-            const distance = haversineDistance(location, otpLocation);
-            if (distance <= 1) { // 1 km range
-                student.present = true;
-            } else {
-                student.present = false;
-            }
-            await student.save();
-            res.status(200).json({ success: true, message: 'Attendance marked successfully' });
-        } else {
-            res.status(404).json({ success: false, error: 'Invalid OTP or email' });
+        if (!student) {
+            return res.status(404).json({ success: false, error: 'Invalid OTP or email' });
         }
+
+        if (student.otpExpiration < Date.now()) {
+            return res.status(400).json({ success: false, error: 'OTP expired' });
+        }
+
+        const otpLocation = {
+            latitude: student.latitude,
+            longitude: student.longitude
+        };
+
+        const distance = haversineDistance(location, otpLocation);
+        student.present = distance <= 1; // mark present if within 1 km
+        await student.save();
+
+        res.status(200).json({ success: true, message: 'Attendance marked successfully' });
     } catch (err) {
+        console.error('Error verifying OTP:', err);
         res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
-router.get('/attendance', verifyToken, async(req,res)=>{
-    const attendance = await Student.find();
+// Get All Attendance
+router.get('/attendance', verifyToken, async (req, res) => {
+    try {
+        const attendance = await Student.find();
+        return res.status(200).json({ attendance });
+    } catch (err) {
+        return res.status(500).json({ error: 'Failed to fetch attendance' });
+    }
+});
 
-    return res.status(200).json({ attendance});
-})
-
+// Get Today's Attendance
 router.get('/getattendancebydate', verifyToken, async (req, res) => {
     try {
-        const currentDate = new Date();
-        const formattedDate = currentDate.toDateString();
-        const attendance = await Student.find();
-        const todayAttendance = attendance.filter(student => student.date === formattedDate);
+        const formattedDate = new Date().toDateString();
+        const todayAttendance = await Student.find({ date: formattedDate });
 
         if (todayAttendance.length === 0) {
             return res.status(404).send('There is no attendance for today!');
         }
-        return res.status(200).json({ attendance:todayAttendance });
-    }catch (error) {
+        return res.status(200).json({ attendance: todayAttendance });
+    } catch (error) {
         return res.status(500).json({ message: 'Error fetching attendance list', error });
     }
 });
-router.post('/send-otp', verifyToken,async (req, res) => {
-    const currentDate = new Date();
-    const formattedDate = currentDate.toDateString(); // Format as 'Fri Jun 07 2024'
 
-    const { email, location } = req.body;
-    const otp = generateOtp();
-
+// Get Attendance by Logged-in User (from token)
+router.get('/getattendancebyemail', verifyToken, async (req, res) => {
     try {
-        const student = new Student({
-            email,
-            otp,
-            otpExpiration: Date.now() + 5 * 60 * 1000,
-            present: false,
-            date: formattedDate,
-            latitude: location.latitude,
-            longitude: location.longitude
-        });
-        await student.save();
-        await sendOtp(email, otp, formattedDate, location);
-        res.status(200).send('OTP sent');
+        const { email } = req.user;
 
-    } catch (err) {
-        console.error('Error generating OTP:', err);
-        res.status(500).send('Error generating OTP');
+        const attendance = await Student.find({ email });
+        if (attendance.length === 0) {
+            return res.status(200).send('No attendance for this user');
+        }
+
+        return res.status(200).json({ attendance });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error fetching attendance list', error: error.message });
     }
 });
 
-router.get('/getattendancebyemail', verifyToken,  async (req, res) => {
+// Get Attendance for Specific Date and Email
+router.get('/attendance/:email/:date', verifyToken, async (req, res) => {
+    const { email, date } = req.params;
+
     try {
-        const { email }=req.user;
-        console.log(email);
-        const attendance = await Student.find({email:email});
-        if(!attendance){
-            return res.status(200).send('No attendance for this user');
+        const attendance = await Student.findOne({ email, date });
+        if (!attendance) {
+            return res.status(404).send('No attendance record found for this date');
         }
-        console.log(attendance.email);
-        return res.status(200).json({ attendance });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error fetching attendance list', error:error.message });
+
+        res.status(200).json({ attendance });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
