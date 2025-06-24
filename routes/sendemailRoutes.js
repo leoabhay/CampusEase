@@ -26,7 +26,41 @@ function sendVerificationEmail(user) {
         from: process.env.EMAIL_USER,
         to: user.email,
         subject: 'Email Verification for Signup',
-        text: `Please click the following link to verify your login: ${verificationUrl}`
+        html: `
+      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5; max-width: 600px; margin: auto;">
+        <h2 style="color: #2c3e50;">Verify Your Login</h2>
+        <p>Hello,</p>
+        <p>You have been registered on <strong>CampusEase</strong>. Use the following credentials to log in:</p>
+        <table style="margin: 15px 0; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px; font-weight: bold;">Email:</td>
+            <td style="padding: 8px;">${user.email}</td>
+          </tr>
+          <tr style="background-color: #f8f8f8;">
+            <td style="padding: 8px; font-weight: bold;">Password:</td>
+            <td style="padding: 8px;">${user.password || 'N/A'}</td>
+          </tr>
+        </table>
+        <p>Please click the button below to verify your login:</p>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" 
+             style="
+               background-color: #007bff;
+               color: #fff;
+               padding: 12px 24px;
+               text-decoration: none;
+               border-radius: 6px;
+               font-weight: bold;
+               display: inline-block;
+             ">
+            Verify Your Login
+          </a>
+        </p>
+        <p>If the button doesn’t work, copy and paste the following link into your browser:</p>
+        <p style="word-break: break-all;">${verificationUrl}</p>
+        <p>Thank you,<br/>CampusEase Team</p>
+      </div>
+    `
     };
     return transporter.sendMail(mailOptions);
 }
@@ -40,6 +74,9 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
   
       const currentDate = new Date();
       const formattedDate = currentDate.toDateString();
+
+       // Save plain password for email (not for DB)
+      const plainPassword = password;
 
       // Hash the password before saving
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -62,7 +99,10 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
         });
   
         await newUser.save();
-        await sendVerificationEmail(newUser);
+              await sendVerificationEmail({
+        email: newUser.email,
+        password: plainPassword
+      });
   
         return res.status(201).json({ message: 'Registration successful, please check your email to verify your account' });
       }
@@ -86,7 +126,10 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
           { new: true }
         );
   
-        await sendVerificationEmail(newUser);
+         await sendVerificationEmail({
+        email: updatedUser.email,
+        password: plainPassword
+      });
         console.log('Verification email sent to:', newUser.email);
         return res.status(200).json({ message: 'Registration successful, please check your email to verify your account' });
       }
@@ -95,7 +138,6 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
     }
   });
   
-// router.post('/signupUser', verifyToken, async (req, res) => {
 //     try {
 //         const { name, email, rollno, address, password, confirmPassword, role } = req.body;
 
