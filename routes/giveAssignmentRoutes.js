@@ -6,6 +6,15 @@ const verifyToken=require('../middleware')
 const Signup=require('../models/signupModel');
 const Enrollment=require('../models/enrollmentModel');
 const UserSubjects= require('../models/userSubjectModel');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'Gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -21,31 +30,58 @@ const storage = multer.diskStorage({
 
 
 
-  router.post('/postGiveAssignments', verifyToken, upload.single('assignmentFile'), async (req, res) => {
-    try {
-        console.log('File received:', req.file); 
-        const { subject, assignmentName, dueDate ,remarks } = req.body;
-        const file = req.file;
+router.post('/postGiveAssignments', verifyToken, upload.single('assignmentFile'), async (req, res) => {
+  try {
+    const { subject, assignmentName, dueDate, remarks } = req.body;
+    const file = req.file;
 
-        if (!file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        } else {
-            const filename = file.filename;
-            const assignment = new Assignment({
-                subject,
-                assignmentName,
-                assignmentFile: `http://localhost:3200/uploads/${filename}`,
-                remarks,
-                dueDate 
-            });
-            const savedAssignment = await assignment.save();
-            res.status(201).json(savedAssignment);
-        }
-    } catch (err) {
-        console.error(err); 
-        res.status(400).json({ message: err.message });
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
+
+    const filename = file.filename;
+    const assignment = new Assignment({
+      subject,
+      assignmentName,
+      assignmentFile: `http://localhost:3200/uploads/${filename}`,
+      remarks,
+      dueDate
+    });
+
+    const savedAssignment = await assignment.save();
+
+    // 🔍 Fetch only students who have enrolled in this exact subject
+    const enrolledStudents = await UserSubjects.find({ "subjects.name": subject });
+
+    // 📧 Extract the emails of enrolled students
+    const studentEmails = enrolledStudents.map(s => s.userEmail);
+
+    // ✉️ Send email only to enrolled students
+    if (studentEmails.length > 0) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: studentEmails,
+        subject: `New Assignment for ${subject}: ${assignmentName}`,
+        html: `
+          <h3>New Assignment Posted</h3>
+          <p><strong>Subject:</strong> ${subject}</p>
+          <p><strong>Assignment:</strong> ${assignmentName}</p>
+          <p><strong>Due Date:</strong> ${dueDate}</p>
+          <p><strong>Remarks:</strong> ${remarks}</p>
+          <p><a href="http://localhost:3200/uploads/${filename}">Download Assignment File</a></p>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+
+    res.status(201).json(savedAssignment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to create assignment', error: err.message });
+  }
 });
+
 
 router.get('/getGiveAssignments', async (req, res) => {
     try {

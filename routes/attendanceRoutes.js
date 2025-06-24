@@ -36,4 +36,41 @@ router.get('/getattendance',verifyToken, async (req, res) => {
 })
 
 
+router.post('/face-register', verifyToken, async (req, res) => {
+  const { Email, Name, Rollno, Subject, image } = req.body;
+
+  const currentDate = new Date();
+  const formattedDate = currentDate.toDateString();
+
+  try {
+    // Step 1: Send image to Python server for registration
+    const response = await axios.post('http://localhost:5001/register', {
+      email: Email,
+      image
+    });
+
+    if (response.data.success) {
+      // Step 2: Save to attendance collection
+      const newAttendance = new Attendance({
+        Email,
+        Name,
+        Rollno,
+        Subject,
+        Date: formattedDate,
+        Remarks: 'Face Registered',
+        FaceRegistered: true
+      });
+
+      await newAttendance.save();
+      return res.status(200).json({ success: true, message: 'Face registered and attendance saved' });
+    } else {
+      return res.status(400).json({ success: false, message: 'Face registration failed', error: response.data.message });
+    }
+  } catch (error) {
+    console.error('Error connecting to Python:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+
 module.exports = router;

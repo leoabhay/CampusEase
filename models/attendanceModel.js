@@ -7,6 +7,7 @@ const AttendanceSchema= new mongoose.Schema({
     Rollno:{type:Number},
     Subject:{type: String},
     Date:{type: String},
+    FaceRegistered: { type: Boolean, default: false },
    
     Remarks:{
         type:String

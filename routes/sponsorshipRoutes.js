@@ -27,21 +27,27 @@ router.post('/sponsorship',verifyToken, async (req, res) => {
 })
 
 
-router.get('/getSponsorships',verifyToken, async (req, res) => {
-    const sponsorship = await Sponsorship.find(decision);
-    if(sponsorship.decision=="accepted"){
-        res.json({ message: 'Accepted Sponsorship : ', sponsorship:sponsorship });
+router.get('/getSponsorships', verifyToken, async (req, res) => {
+  try {
+    const { decision } = req.query; // accepted, rejected, pending
+
+    let filter = {};
+    if (decision) {
+      filter.decision = decision; // filter by decision if provided
     }
-    else if(sponsorship.decision=="rejected"){
-        res.json({ message: 'Rejected Sponsorship : ', sponsorship:sponsorship });
+
+    const sponsorships = await Sponsorship.find(filter);
+
+    if (!sponsorships || sponsorships.length === 0) {
+      return res.status(404).json({ message: 'No sponsorships found with the given decision' });
     }
-    else if(sponsorship.decision=="pending"){
-        res.json({ message: 'Pending Sponsorship : ', sponsorship:sponsorship });
-    }else{
-         res.json({message: "Couldn't fetch data of sponsorship", error});
-    }
-    
-})
+
+    res.json({ message: `Sponsorships${decision ? ' with decision: ' + decision : ''}`, sponsorships });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching sponsorships', error: error.message });
+  }
+});
+
 
 
 router.delete('/deleteSponsorship/:id',verifyToken,async(req,res)=>{

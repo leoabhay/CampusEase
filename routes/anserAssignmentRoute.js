@@ -8,6 +8,16 @@ const Signup = require('../models/signupModel');
 const Enrollment=require('../models/enrollmentModel');
 const UserSubjects = require('../models/userSubjectModel');
 const Students = require('../models/otpModel');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'Gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -66,21 +76,17 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const existingAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment }).lean().exec();
-
+    const existingAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment }).lean();
     if (!existingAssignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
 
-    const alreadySubmittedAssignment = await answerAssignment.findOne({ rollno, subject, assignment }).lean().exec();
-
+    const alreadySubmittedAssignment = await answerAssignment.findOne({ rollno, subject, assignment }).lean();
     if (alreadySubmittedAssignment) {
       return res.status(400).json({ error: 'Assignment already submitted' });
     }
 
-    const dueDate = new Date(existingAssignment.dueDate);
     const submittedDate = Date.now();
-
     const newAssignment = new answerAssignment({
       subject,
       assignment,
@@ -91,13 +97,48 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
 
     await newAssignment.save();
 
+    // ⏰ Status
+    const dueDate = new Date(existingAssignment.dueDate);
     const status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
-    res.status(201).json({ message: "Assignment submitted successfully.", newAssignment, status: status });
+
+    // 🧑‍🎓 Get student details
+    const student = await Signup.findOne({ rollno }).lean();
+
+    // 🧑‍🏫 Find teacher of this subject
+    const enrollment = await Enrollment.findOne({ "subjects.name": subject, "subjects.teacher": { $exists: true } });
+    if (!enrollment) {
+      return res.status(404).json({ message: 'No teacher found for this subject' });
+    }
+
+    const teacherInfo = enrollment.subjects.find(s => s.name === subject);
+    const teacherEmail = teacherInfo?.teacher;
+
+    // 📧 Send email to teacher
+    if (teacherEmail) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: teacherEmail,
+        subject: `Assignment Submitted by ${student?.name || 'Student'}`,
+        html: `
+          <h3>Assignment Submission Notification</h3>
+          <p><strong>Student:</strong> ${student?.name} (${student?.rollno})</p>
+          <p><strong>Assignment:</strong> ${assignment}</p>
+          <p><strong>Subject:</strong> ${subject}</p>
+          <p><strong>Status:</strong> ${status}</p>
+          <p><strong>Download:</strong> <a href="http://localhost:3200/uploads/${file.filename}">Click here</a></p>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+
+    res.status(201).json({ message: "Assignment submitted successfully.", newAssignment, status });
   } catch (error) {
     console.error('Error creating assignment:', error);
     return res.status(500).json({ message: 'Error creating assignment', error });
   }
 });
+
 
   // Read All
   router.get('/getassignments', async (req, res) => {
