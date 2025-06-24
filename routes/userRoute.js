@@ -105,7 +105,7 @@ router.post('/signin', async (req, res) => {
         // const token = jwt.sign({ email: userData.email }, 'secretKey');
         const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , userRole: userData.role }, 'secretKey');
 
-        res.json({ message: 'Login Sucessfull', role: userRole, token: token });
+        res.json({ message: 'Login Sucessfull', user: userData, token: token });
     }
     catch (error) {
       res.status(500).json({ message: 'something went wrong', error: error.stack });
@@ -136,35 +136,6 @@ router.get('/getuserdata', verifyToken, async (req, res) =>{
         res.status(500).json({ messgae: 'something is error', error });
     }
 })
-
-// router.put('/userdata/:id', verifyToken,upload.single("photo"), async (req, res) => {
-//   try {
-//     const { address,biography,facebook,instagram,whatsapp,website }= req.body;
-//     const file = req.file;
-//     const updateData = {
-//       address,
-//       // photo:`http://localhost:3200/uploads/${file.filename}`,
-//       biography,
-//       facebook,
-//       instagram,
-//       whatsapp,
-//       website
-//     }
-//     if (file) {
-//       updateData.photo = `http://localhost:3200/uploads/${file.filename}`;
-//     }
-//       const updatedUser = await userRegister.findByIdAndUpdate(
-//         req.params.id,
-//         {$set: updateData},
-//         { new: true }
-//     );
-  
-//     res.json({ message: 'Profile updated successfully!', userdata: updatedUser });
-//   } catch (error) {
-//       res.status(500).json({ message: 'Something went wrong', error });
-//   }
-// });
-
 
 router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res) => {
   try {

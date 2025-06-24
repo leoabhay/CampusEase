@@ -9,22 +9,7 @@ const profileSchema = new mongoose.Schema({
   },
   address: {
     type: String,
-  },
-  biography: {
-    type: String,
-  },
-  facebook: {
-    type: String,
-  },
-  instagram: {
-    type: String,
-  },
-  whatsapp: {
-    type: String,
-  },
-  website: {
-    type: String,
-  },
+  }
 });
 
 const Profile = mongoose.model('Profile', profileSchema);
