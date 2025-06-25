@@ -64,6 +64,8 @@ function sendVerificationEmail(user) {
     };
     return transporter.sendMail(mailOptions);
 }
+
+// User Registration Route
 router.post('/signupUser', verifyToken,  async (req, res) => {
     try {
       const { name, email, rollno, address, password, confirmPassword, role } = req.body;
@@ -99,7 +101,7 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
         });
   
         await newUser.save();
-              await sendVerificationEmail({
+        await sendVerificationEmail({
         email: newUser.email,
         password: plainPassword
       });
@@ -137,58 +139,78 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
       return res.status(500).json({ message: 'Something went wrong', error: error.message });
     }
   });
-  
-//     try {
-//         const { name, email, rollno, address, password, confirmPassword, role } = req.body;
 
-//         if (password !== confirmPassword) {
-//             return res.json({ message: 'Passwords do not match' });
-//         }
-//         const currentDate = new Date();
-//         const formattedDate = currentDate.toDateString(); // Format as 'Fri Jun 07 2024'
-//         const user = await userRegister.findOne({email});
-//         if(!user){
-//             const newUser = new userRegister({
-//                 name,
-//                 email,
-//                 rollno,
-//                 address,
-//                 password,
-//                 confirmPassword,
-//                 role,
-//                 registereddate:formattedDate,
-//                 isVerified: false  // Add a field to track email verification status
-//             });
-    
-//             await newUser.save();
-//             await sendVerificationEmail(newUser);
-    
-//             return res.json({ message: 'Registration successful, please check your email to verify your account' });
-//         }
-//         if(user.isVerified===true){
-//             return res.json({ message: 'Already registered.',user });
-//         }else{
-//             const newUser = await userRegister.findOneAndUpdate({email},{
-//                 name,
-//                 email,
-//                 rollno,
-//                 address,
-//                 password,
-//                 confirmPassword,
-//                 role,
-//                 registereddate:formattedDate,
-//                 isVerified: false  // Add a field to track email verification status
-//             },{new:true});
-    
-//             //await newUser.save();
-//             await sendVerificationEmail(newUser);
-//             return res.status(200).json({ message: 'Registration successful, please check your email to verify your account' });
-//         }
-        
-//     } catch (error) {
-//         return res.json({ message: 'Something went wrong', error:error.message });
-//     }
-// });
+// user registration route ( for admin only )
+router.post('/signupAdmin', async (req, res) => {
+  try {
+    const { name, email, address, password, confirmPassword } = req.body;
+
+    if (!name || !email || !address || !password || !confirmPassword) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    const existingUser = await userRegister.findOne({ email });
+    const plainPassword = password;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const currentDate = new Date().toDateString();
+
+    if (!existingUser) {
+      const newAdmin = new userRegister({
+        name,
+        email,
+        address,
+        password: hashedPassword,
+        role: 'admin', // Force assignment
+        registereddate: currentDate,
+        isVerified: false
+      });
+
+      await newAdmin.save();
+
+      await sendVerificationEmail({
+        email: newAdmin.email,
+        password: plainPassword
+      });
+
+      return res.status(201).json({ message: 'Admin created successfully. Verification email sent. Please check your email' });
+    }
+
+    if (existingUser.isVerified) {
+      return res.status(409).json({ message: 'Admin already exists and is verified.' });
+    } else {
+      const updatedAdmin = await userRegister.findOneAndUpdate(
+        { email },
+        {
+          name,
+          address,
+          password: hashedPassword,
+          role: 'admin',
+          registereddate: currentDate,
+          isVerified: false
+        },
+        { new: true }
+      );
+
+      await sendVerificationEmail({
+        email: updatedAdmin.email,
+        password: plainPassword
+      });
+
+      return res.status(200).json({ message: 'Admin updated and verification email re-sent.' });
+    }
+
+  } catch (err) {
+    console.error('Admin signup error:', err);
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+
+
 
 router.get('/verify-signup', async (req, res) => {
     try {

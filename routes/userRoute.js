@@ -103,7 +103,7 @@ router.post('/signin', async (req, res) => {
         }
         const userRole = userData.role;
         // const token = jwt.sign({ email: userData.email }, 'secretKey');
-        const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , userRole: userData.role }, 'secretKey');
+        const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , role: userData.role }, 'secretKey');
 
         res.json({ message: 'Login Sucessfull', role: userRole, token: token });
     }
@@ -218,38 +218,84 @@ router.delete('/user/:id', verifyToken,async (req, res) => {
 
 
 // Filter students by email or roll number
+// Search one student
 router.get('/students/search', verifyToken, async (req, res) => {
   try {
-    const { name, rollno , email } = req.query;
+    const { name, rollno, email } = req.query;
 
-    // Build the query object based on the provided parameters
     const query = {};
-    if (name) {
-      query.name = name;
-    }
-    if (email) {
-      query.email = email;
-    }
-    if (rollno) {
-      query.rollno = rollno;
-    }
+    if (name) query.name = name;
+    if (email) query.email = email;
+    if (rollno) query.rollno = rollno;
 
-    // Ensure at least one parameter is provided
     if (!name && !rollno && !email) {
-      return res.status(400).json({ message: 'At least one of name,email or roll number must be provided' });
+      return res.status(400).json({ message: 'At least one of name, email or roll number must be provided' });
     }
 
-    const students = await userRegister.find(query).lean().exec();
-    if (!students || students.length === 0) {
-      return res.status(404).json({ message: 'No students found' });
+    const student = await userRegister.findOne(query).lean().exec();
+    if (!student) {
+      return res.status(404).json({ message: 'No student found' });
     }
 
-    res.status(200).json(students);
+    res.status(200).json(student);
   } catch (error) {
-    console.error('Error fetching students:', error);
-    res.status(500).json({ message: 'Error fetching students', error: error.message });
+    console.error('Error fetching student:', error);
+    res.status(500).json({ message: 'Error fetching student', error: error.message });
   }
 });
+
+
+// // Search one faculty
+// router.get('/faculty/search', verifyToken, async (req, res) => {
+//   try {
+//     const { name, rollno, email } = req.query;
+
+//     const query = {};
+//     if (name) query.name = name;
+//     if (email) query.email = email;
+//     if (rollno) query.rollno = rollno;
+
+//     if (!name && !rollno && !email) {
+//       return res.status(400).json({ message: 'At least one of name, email or teacher number must be provided' });
+//     }
+
+//     const faculty = await Faculty.findOne(query).lean().exec();
+//     if (!faculty) {
+//       return res.status(404).json({ message: 'No faculty found' });
+//     }
+
+//     res.status(200).json(faculty);
+//   } catch (error) {
+//     console.error('Error fetching faculty:', error);
+//     res.status(500).json({ message: 'Error fetching faculty', error: error.message });
+//   }
+// });
+
+// // Search one secretary
+// router.get('/secretary/search', verifyToken, async (req, res) => {
+//   try {
+//     const { name, rollno, email } = req.query;
+
+//     const query = {};
+//     if (name) query.name = name;
+//     if (email) query.email = email;
+//     if (rollno) query.rollno = rollno;
+
+//     if (!name && !rollno && !email) {
+//       return res.status(400).json({ message: 'At least one of name, email or secretary number must be provided' });
+//     }
+
+//     const secretary = await Secretary.findOne(query).lean().exec();
+//     if (!secretary) {
+//       return res.status(404).json({ message: 'No secretary found' });
+//     }
+
+//     res.status(200).json(secretary);
+//   } catch (error) {
+//     console.error('Error fetching secretary:', error);
+//     res.status(500).json({ message: 'Error fetching secretary', error: error.message });
+//   }
+// });
 
 
 module.exports = router;
