@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const Profile = require('../models/profileModel');
+const Register = require('../models/signupModel');
 const verifyToken=require('../middleware')
 
 
@@ -34,20 +35,34 @@ const storage = multer.diskStorage({
       res.status(500).json({ message: 'Error saving profile', error: err.message });
     }
   });
+
   router.get('/profileData', verifyToken, async (req, res) => {
-    try {
-      const rollno = req.user.rollno;
-      const profile = await Profile.findOne({ rollno: rollno });
-  
-      if (!profile) {
-        return res.status(404).json({ message: 'Profile not found' });
-      }
-  
-      res.status(200).json(profile);
-    } catch (err) {
-      res.status(500).json({ message: 'Error fetching profile', error: err.message });
+  try {
+    const rollno = req.user.rollno;
+
+    // Find profile by rollno
+    const profile = await Profile.findOne({ rollno: rollno });
+
+    // Find registered user by rollno to get registereddate
+    const user = await Register.findOne({ rollno: rollno });
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile not found' });
     }
-  });
-  
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Combine profile data + registereddate from Register model
+    const combinedData = {
+      ...profile.toObject(),
+      registereddate: user.registereddate, // as stored in your Register schema
+    };
+
+    res.status(200).json(combinedData);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching profile data', error: err.message });
+  }
+});
   
   module.exports = router;
