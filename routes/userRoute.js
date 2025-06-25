@@ -5,7 +5,9 @@ const userRegister = require('../models/signupModel');
 const jwt = require('jsonwebtoken');
 const verifyToken=require('../middleware');
 const bcrypt=require('bcrypt');
-
+const Assignment = require('../models/answerAssignmentModel');
+const Course = require('../models/enrollmentModel');
+const Attendance = require('../models/otpModel');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -35,7 +37,7 @@ router.post('/signup', async (req, res) => {
       rollno,
       address,
       password: hashedPassword,
-      confirmPassword: hashedPassword, // You may even omit this from DB
+      confirmPassword: hashedPassword,
       role,
       isVerified: false, // required field
     });
@@ -46,12 +48,6 @@ router.post('/signup', async (req, res) => {
     return res.status(500).json({ message: 'Something went wrong', error: error.message });
   }
 });
-
-
-// router.get('/getUserData', async (req, res) => {
-//     const userData = await userRegister.find();
-//     res.json({ userData: userData });
-// })
 
 router.get('/user/faculty', async (req, res) => {
     try {
@@ -119,7 +115,6 @@ router.get('/userdata', async (req, res) => {
     res.json({ userData: userData });
 })
  
-
 
 router.get('/getuserdata', verifyToken, async (req, res) =>{
     try{
@@ -219,30 +214,47 @@ router.delete('/user/:id', verifyToken,async (req, res) => {
 
 // Filter students by email or roll number
 // Search one student
+
+
 router.get('/students/search', verifyToken, async (req, res) => {
   try {
     const { name, rollno, email } = req.query;
 
-    const query = {};
-    if (name) query.name = name;
-    if (email) query.email = email;
-    if (rollno) query.rollno = rollno;
+    const orConditions = [];
 
-    if (!name && !rollno && !email) {
-      return res.status(400).json({ message: 'At least one of name, email or roll number must be provided' });
+    if (name) orConditions.push({ name: { $regex: name, $options: 'i' } });
+    if (email) orConditions.push({ email: { $regex: email, $options: 'i' } });
+    if (rollno && !isNaN(Number(rollno))) {
+      orConditions.push({ rollno: Number(rollno) });
     }
 
-    const student = await userRegister.findOne(query).lean().exec();
+    if (orConditions.length === 0) {
+      return res.status(400).json({ message: 'At least one of name, email or roll number must be provided and valid' });
+    }
+
+    const student = await userRegister.findOne({ $or: orConditions }).lean();
     if (!student) {
       return res.status(404).json({ message: 'No student found' });
     }
 
-    res.status(200).json(student);
+    const [assignments, courses, attendance] = await Promise.all([
+      Assignment.find({ studentRollno: student.rollno }).lean(),
+      Course.find({ enrolledStudents: student._id }).lean(),
+      Attendance.find({ studentRollno: student.rollno }).lean()
+    ]);
+
+    res.status(200).json({
+      ...student,
+      assignments,
+      courses,
+      attendance
+    });
   } catch (error) {
     console.error('Error fetching student:', error);
     res.status(500).json({ message: 'Error fetching student', error: error.message });
   }
 });
+
 
 
 // // Search one faculty
