@@ -8,6 +8,7 @@ const bcrypt=require('bcrypt');
 const Assignment = require('../models/answerAssignmentModel');
 const Course = require('../models/enrollmentModel');
 const Attendance = require('../models/otpModel');
+const Club = require('../models/addClubModel');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -212,11 +213,9 @@ router.delete('/user/:id', verifyToken,async (req, res) => {
 });
 
 
-// Filter students by email or roll number
+// Filter students by email or roll number or name
 // Search one student
-
-
-router.get('/students/search', verifyToken, async (req, res) => {
+router.get('/student/search', verifyToken, async (req, res) => {
   try {
     const { name, rollno, email } = req.query;
 
@@ -237,17 +236,23 @@ router.get('/students/search', verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'No student found' });
     }
 
-    const [assignments, courses, attendance] = await Promise.all([
-      Assignment.find({ studentRollno: student.rollno }).lean(),
-      Course.find({ enrolledStudents: student._id }).lean(),
-      Attendance.find({ studentRollno: student.rollno }).lean()
+    // Fetch related data
+    const [assignments, allCourses, attendanceRecords] = await Promise.all([
+      Assignment.find({ rollno: student.rollno }).lean(),
+      Course.find({ department: student.department || /.*/ }).lean(), // fallback for now
+      Attendance.find({
+        $or: [
+          { name: student.name },
+          { email: student.email }
+        ]
+      }).lean()
     ]);
 
     res.status(200).json({
       ...student,
       assignments,
-      courses,
-      attendance
+      courses: allCourses, // not working yet, need to fix
+      attendance: attendanceRecords
     });
   } catch (error) {
     console.error('Error fetching student:', error);
@@ -255,59 +260,70 @@ router.get('/students/search', verifyToken, async (req, res) => {
   }
 });
 
+// Search one faculty
+router.get('/faculty/search', verifyToken, async (req, res) => {
+  try {
+    const { name, email } = req.query;
+    const orConditions = [];
 
+    if (name) orConditions.push({ name: { $regex: name, $options: 'i' } });
+    if (email) orConditions.push({ email: { $regex: email, $options: 'i' } });
 
-// // Search one faculty
-// router.get('/faculty/search', verifyToken, async (req, res) => {
-//   try {
-//     const { name, rollno, email } = req.query;
+    if (orConditions.length === 0) {
+      return res.status(400).json({ message: 'At least name or email must be provided and valid' });
+    }
 
-//     const query = {};
-//     if (name) query.name = name;
-//     if (email) query.email = email;
-//     if (rollno) query.rollno = rollno;
+    const faculty = await userRegister.findOne({ role: 'faculty', $or: orConditions }).lean();
+    if (!faculty) {
+      return res.status(404).json({ message: 'No faculty found' });
+    }
 
-//     if (!name && !rollno && !email) {
-//       return res.status(400).json({ message: 'At least one of name, email or teacher number must be provided' });
-//     }
+    res.status(200).json({
+      name: faculty.name,
+      email: faculty.email,
+      address: faculty.address,
+      registereddate: faculty.registereddate,
+      photo: faculty.photo || null
+    });
+  } catch (error) {
+    console.error('Error fetching faculty:', error);
+    res.status(500).json({ message: 'Error fetching faculty', error: error.message });
+  }
+});
 
-//     const faculty = await Faculty.findOne(query).lean().exec();
-//     if (!faculty) {
-//       return res.status(404).json({ message: 'No faculty found' });
-//     }
+// Search one secretary
+router.get('/secretary/search', verifyToken, async (req, res) => {
+  try {
+    const { name, email } = req.query;
 
-//     res.status(200).json(faculty);
-//   } catch (error) {
-//     console.error('Error fetching faculty:', error);
-//     res.status(500).json({ message: 'Error fetching faculty', error: error.message });
-//   }
-// });
+    const orConditions = [];
+    if (name) orConditions.push({ name: { $regex: name, $options: 'i' } });
+    if (email) orConditions.push({ email: { $regex: email, $options: 'i' } });
 
-// // Search one secretary
-// router.get('/secretary/search', verifyToken, async (req, res) => {
-//   try {
-//     const { name, rollno, email } = req.query;
+    if (orConditions.length === 0) {
+      return res.status(400).json({ message: 'At least name or email must be provided and valid' });
+    }
 
-//     const query = {};
-//     if (name) query.name = name;
-//     if (email) query.email = email;
-//     if (rollno) query.rollno = rollno;
+    const secretary = await userRegister.findOne({ role: 'secretary', $or: orConditions }).lean();
+    if (!secretary) {
+      return res.status(404).json({ message: 'No secretary found' });
+    }
 
-//     if (!name && !rollno && !email) {
-//       return res.status(400).json({ message: 'At least one of name, email or secretary number must be provided' });
-//     }
+    const club = await Club.findOne({ contactEmail: secretary.email }).lean();
 
-//     const secretary = await Secretary.findOne(query).lean().exec();
-//     if (!secretary) {
-//       return res.status(404).json({ message: 'No secretary found' });
-//     }
-
-//     res.status(200).json(secretary);
-//   } catch (error) {
-//     console.error('Error fetching secretary:', error);
-//     res.status(500).json({ message: 'Error fetching secretary', error: error.message });
-//   }
-// });
+    res.status(200).json({
+      name: secretary.name,
+      email: secretary.email,
+      address: secretary.address,
+      registereddate: secretary.registereddate,
+      photo: secretary.photo || null,
+      club: club || null
+    });
+  } catch (error) {
+    console.error('Error fetching secretary:', error);
+    res.status(500).json({ message: 'Error fetching secretary', error: error.message });
+  }
+});
 
 
 module.exports = router;
