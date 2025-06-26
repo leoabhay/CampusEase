@@ -86,7 +86,7 @@ router.post('/signin', async (req, res) => {
         const { email, password } = req.body;
         const userData = await userRegister.findOne({ email });
         if (!userData) {
-            console.log("Password doesnot match ", error);
+            console.log("User not found ", error);
             return res.json({ message: 'username is not found ' });
         }
         if(userData.isVerified !=true){
@@ -95,7 +95,7 @@ router.post('/signin', async (req, res) => {
         const userPasswordMatch = await bcrypt.compare(password, userData.password);
         //const userPasswordMatch = password === userData.password;
         if (!userPasswordMatch) {
-            console.log('password doesnot match ');
+            // console.log('password doesnot match ');
             return res.json({ message: 'password is incorrect' });
         }
         const userRole = userData.role;

@@ -240,77 +240,111 @@ router.get('/verify-signup', async (req, res) => {
 });
 
 
-// Step 1: Request Password Reset
+// Step 1: Request Reset Password - send email with token link
 router.post('/request-reset-password', async (req, res) => {
+  try {
     const { email } = req.body;
-    const user = await userRegister.findOne({ email });
 
+    const user = await userRegister.findOne({ email });
     if (!user) {
-        return res.status(400).json({ message: 'User not found' });
+      return res.status(400).json({ message: 'User not found' });
     }
 
-    const token = jwt.sign({ email: user.email }, 'secretKey', { expiresIn: '1h' });
-    const resetUrl = `http://localhost:3200/reset-password?token=${token}`;
+    const token = jwt.sign({ email: user.email }, 'secretkey', { expiresIn: '1h' });
+    // IMPORTANT: This should point to your FRONTEND reset page URL (e.g., Angular app)
+    const resetUrl = `http://localhost:4200/reset-password?token=${token}`;
 
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: 'Password Reset',
-        text: `Please click the following link to reset your password: ${resetUrl}`
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: 'Password Reset',
+       html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2>Password Reset Request</h2>
+      <p>Hello,</p>
+      <p>You recently requested to reset your password for your account. Click the button below to reset it:</p>
+      <p style="text-align: center;">
+        <a href="${resetUrl}" 
+           style="
+             display: inline-block;
+             padding: 12px 24px;
+             font-size: 16px;
+             color: white;
+             background-color: #007bff;
+             text-decoration: none;
+             border-radius: 6px;
+           "
+           target="_blank"
+           rel="noopener noreferrer"
+        >
+          Reset Password
+        </a>
+      </p>
+      <p>If you did not request a password reset, please ignore this email.</p>
+      <hr>
+      <p style="font-size: 12px; color: #777;">
+        If the button above does not work, copy and paste the following link into your browser:<br>
+        <a href="${resetUrl}" style="color: #007bff;">${resetUrl}</a>
+      </p>
+      <p>Thanks,<br/>Your CampusEase Team</p>
+    </div>
+  `
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            return res.status(500).json({ message: 'Error sending email', error });
-        }
-        res.json({ message: 'Password reset link sent to your email' });
+      if (error) {
+        console.error('Error sending email:', error);
+        return res.status(500).json({ message: 'Error sending email', error });
+      }
+      console.log('Reset password email sent:', info.response);
+
+      // For testing: also send resetUrl in response (remove in production)
+      res.json({ message: 'Password reset link sent to your email', resetUrl });
     });
+
+  } catch (error) {
+    console.error('Request reset password error:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
 });
 
-router.get('/reset-password', async (req, res) => {
-    const { token } = req.query;
-    try {
-        const decoded = jwt.verify(token, 'secretKey');
-        const user = await userRegister.findOne({ email: decoded.email });
-
-        if (!user) {
-            console.error('Invalid token: User not found');
-            return res.status(400).json({ message: 'Invalid token: User not found' });
-        }
-
-        // Render your Angular reset password form HTML here
-        // For example, if using EJS:
-        res.render('reset-password', { token }); // Assuming 'reset-password' is your view name
-
-    } catch (error) {
-        console.error('Token verification error:', error);
-        return res.status(400).json({ message: 'Invalid or expired token', error });
-    }
-});
-// Step 2: Reset Password using the token
+// Step 2: Reset Password - verify token & update password
 router.post('/reset-password', async (req, res) => {
-    const {  newPassword, confirmPassword } = req.body;
-    const {token }=req.query;
+  try {
+    const { newPassword, confirmPassword } = req.body;
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
     if (newPassword !== confirmPassword) {
-        return res.status(400).json({ message: 'Passwords do not match' });
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
+    let decoded;
     try {
-        const decoded = jwt.verify(token, 'secretKey');
-        const user = await userRegister.findOne({ email: decoded.email });
-
-        if (!user) {
-            return res.status(400).json({ message: 'Invalid token' });
-        }
-
-        user.password = newPassword;
-        user.confirmPassword = confirmPassword;
-        await user.save();
-        
-        return res.json({ message: 'Password reset successful' });
-    } catch (error) {
-        return res.status(400).json({ message: 'Invalid or expired token', error });
+      decoded = jwt.verify(token, 'secretkey');
+    } catch (err) {
+      console.error('JWT verification error:', err);
+      return res.status(400).json({ message: 'Invalid or expired token', error: err.message });
     }
+
+    const user = await userRegister.findOne({ email: decoded.email });
+    if (!user) {
+      return res.status(400).json({ message: 'User not found for this token' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.json({ message: 'Password reset successful' });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
 });
 
 module.exports = router;
