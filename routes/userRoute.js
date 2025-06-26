@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-
+// create a new user
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, rollno, address, password, confirmPassword, role } = req.body;
@@ -50,6 +50,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// get faculty users
 router.get('/user/faculty', async (req, res) => {
     try {
       const faculty = await userRegister.find({ role: 'faculty' });
@@ -60,6 +61,7 @@ router.get('/user/faculty', async (req, res) => {
     }
   });
   
+// get student users
 router.get('/user/student', async (req, res) => {
     try {
       const student = await userRegister.find({ role: 'student' });
@@ -69,7 +71,8 @@ router.get('/user/student', async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
+// get secretary users
 router.get('/user/secretary', async (req, res) => {
     try {
       const secretary = await userRegister.find({ role: 'secretary' });
@@ -80,7 +83,7 @@ router.get('/user/secretary', async (req, res) => {
     }
   });
   
-
+// login user
 router.post('/signin', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -111,12 +114,13 @@ router.post('/signin', async (req, res) => {
     }
 })
 
+// get all user data
 router.get('/userdata', async (req, res) => {
     const userData = await userRegister.find();
     res.json({ userData: userData });
 })
  
-
+// get user data ( for user profile )
 router.get('/getuserdata', verifyToken, async (req, res) =>{
     try{
             const { email } = req.user;
@@ -133,7 +137,7 @@ router.get('/getuserdata', verifyToken, async (req, res) =>{
     }
 })
 
-
+// update user data ( for user profile )
 router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res) => {
   try {
     const { address } = req.body;
@@ -161,7 +165,8 @@ router.put('/userdata/:id', verifyToken, upload.single("photo"), async (req, res
   }
 });
 
-
+// update user password
+// This route allows users to update their password after verifying their old password
 router.put('/password/:id', verifyToken, async (req, res) => {
   try {
     const { oldpassword, password, confirmPassword } = req.body;
@@ -199,7 +204,8 @@ router.put('/password/:id', verifyToken, async (req, res) => {
   }
 });
 
-
+// delete user
+// This route allows an admin to delete a user by their ID
 router.delete('/user/:id', verifyToken,async (req, res) => {
   try {
       const user = await userRegister.findByIdAndDelete(req.params.id);
@@ -325,5 +331,14 @@ router.get('/secretary/search', verifyToken, async (req, res) => {
   }
 });
 
+// Get all users regardless of role
+router.get('/users', async (req, res) => {
+  try {
+    const users = await userRegister.find({});
+    res.json({ users, count: users.length });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get users', error: error.message });
+  }
+});
 
 module.exports = router;
