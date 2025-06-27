@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose'); // added this line
 const Message = require('../models/messageModel');
 const userRegister = require('../models/signupModel');
 const verifyToken = require('../middleware');
 
 // Get conversation between two users
-router.get('/conversation/:id', verifyToken, async (req, res) => {
+router.get('/conversation/:userId', verifyToken, async (req, res) => {
   try {
     const currentUserId = req.user.userId;
     const otherUserId = req.params.userId;
@@ -15,13 +16,25 @@ router.get('/conversation/:id', verifyToken, async (req, res) => {
         { sender: currentUserId, receiver: otherUserId },
         { sender: otherUserId, receiver: currentUserId }
       ]
-    }).sort({ timestamp: 1 });
+    }).sort({ timestamp: 1 }).lean();
 
-    res.json(messages);
+    const normalizedMessages = messages.map(msg => ({
+      _id: msg._id.toString(),
+      senderId: msg.sender.toString(),
+      receiverId: msg.receiver.toString(),
+      message: msg.message,
+      isRead: msg.isRead || false,
+      timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : new Date(msg.timestamp).toISOString()
+    }));
+
+    res.json(normalizedMessages);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
+
+module.exports = router;
+
 
 // Get all conversations for current user
 router.get('/conversations', verifyToken, async (req, res) => {
@@ -89,37 +102,5 @@ router.get('/conversations', verifyToken, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-// // get faculty users
-// router.get('/user/faculty', async (req, res) => {
-//     try {
-//       const faculty = await userRegister.find({ role: 'faculty' });
-//       const count = await userRegister.countDocuments({ role: 'faculty' });
-//       res.json({ faculty, count });
-//     } catch (err) {
-//       res.status(500).json({ error: err.message });
-//     }
-//   });
-  
-// // get student users
-// router.get('/user/student', async (req, res) => {
-//     try {
-//       const student = await userRegister.find({ role: 'student' });
-//       const count = await userRegister.countDocuments({ role: 'student' });
-//       res.json({ student, count });
-//     } catch (err) {
-//       res.status(500).json({ error: err.message });
-//     }
-//   });
-
-// // Get all users regardless of role
-// router.get('/users', async (req, res) => {
-//   try {
-//     const users = await userRegister.find({});
-//     res.json({ users, count: users.length });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Failed to get users', error: error.message });
-//   }
-// });
 
 module.exports = router;
