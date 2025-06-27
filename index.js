@@ -1,11 +1,25 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const app = express();
 const connectdb = require('./db');
 const cors = require('cors');
-
 const path = require('path');
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: 'http://localhost:4200',
+        methods: ['GET', 'POST'],
+        credentials: true
+    }
+});
+const setupSocket = require('./socketServer');
+setupSocket(io);
 
+connectdb();
+
+// import routes
 const userRoutes= require('./routes/userRoute')
 const discussion= require('./routes/discussionRoutes')
 const joinClub= require('./routes/joinClubRoutes')
@@ -34,7 +48,7 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 app.use(express.json());
 app.use(cors());
 
-// routes
+// routes(api)
 app.use(userRoutes);
 app.use(discussion);
 app.use(joinClub);
@@ -64,6 +78,10 @@ app.use(attendanceRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // start the server
-app.listen(process.env.PORT || 3200, () => {
+// app.listen(process.env.PORT || 3200, () => {
+//     console.log(`Server is running on port ${process.env.PORT || 5000}`);
+// });
+
+server.listen(process.env.PORT || 3200, () => {
     console.log(`Server is running on port ${process.env.PORT || 5000}`);
 });
