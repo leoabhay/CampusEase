@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose'); // added this line
+const mongoose = require('mongoose');
 const Message = require('../models/messageModel');
-const userRegister = require('../models/signupModel');
 const verifyToken = require('../middleware');
 
-// Get conversation between two users
+// Get conversation between two users (excluding soft-deleted messages)
 router.get('/conversation/:userId', verifyToken, async (req, res) => {
   try {
     const currentUserId = req.user.userId;
@@ -15,7 +14,8 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
       $or: [
         { sender: currentUserId, receiver: otherUserId },
         { sender: otherUserId, receiver: currentUserId }
-      ]
+      ],
+      deletedBy: { $ne: currentUserId } // exclude deleted for this user
     }).sort({ timestamp: 1 }).lean();
 
     const normalizedMessages = messages.map(msg => ({
@@ -24,7 +24,9 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
       receiverId: msg.receiver.toString(),
       message: msg.message,
       isRead: msg.isRead || false,
-      timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : new Date(msg.timestamp).toISOString()
+      timestamp: msg.timestamp instanceof Date
+        ? msg.timestamp.toISOString()
+        : new Date(msg.timestamp).toISOString()
     }));
 
     res.json(normalizedMessages);
@@ -33,22 +35,19 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router;
-
-
-// Get all conversations for current user
+// Get all conversations for current user (no filter for deleted)
 router.get('/conversations', verifyToken, async (req, res) => {
   try {
     const currentUserId = req.user.userId;
 
-    // Get all unique user IDs that the current user has chatted with
     const conversations = await Message.aggregate([
       {
         $match: {
           $or: [
             { sender: mongoose.Types.ObjectId(currentUserId) },
             { receiver: mongoose.Types.ObjectId(currentUserId) }
-          ]
+          ],
+          deletedBy: { $ne: mongoose.Types.ObjectId(currentUserId) } // exclude deleted messages
         }
       },
       {
@@ -78,9 +77,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
           as: "participant"
         }
       },
-      {
-        $unwind: "$participant"
-      },
+      { $unwind: "$participant" },
       {
         $project: {
           participant: {
@@ -92,12 +89,35 @@ router.get('/conversations', verifyToken, async (req, res) => {
           lastMessage: 1
         }
       },
-      {
-        $sort: { "lastMessage.timestamp": -1 }
-      }
+      { $sort: { "lastMessage.timestamp": -1 } }
     ]);
 
     res.json(conversations);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Soft delete conversation for current user
+router.put('/conversation/:userId/delete', verifyToken, async (req, res) => {
+  try {
+    const currentUserId = req.user.userId;
+    const otherUserId = req.params.userId;
+
+    const result = await Message.updateMany(
+      {
+        $or: [
+          { sender: currentUserId, receiver: otherUserId },
+          { sender: otherUserId, receiver: currentUserId }
+        ],
+        deletedBy: { $ne: currentUserId } // prevent duplicate adds
+      },
+      {
+        $addToSet: { deletedBy: currentUserId } // add user to deletedBy array
+      }
+    );
+
+    res.json({ success: true, modified: result.modifiedCount });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

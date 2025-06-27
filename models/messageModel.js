@@ -5,7 +5,8 @@ const messageSchema = new mongoose.Schema({
   receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'register' },
   message: String,
   isRead: { type: Boolean, default: false },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'register' }]
 });
 
 module.exports = mongoose.model('Message', messageSchema);
