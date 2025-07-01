@@ -4,6 +4,7 @@ const Event = require('../models/eventModel');
 const verifyToken = require('../middleware');  
 const Signup = require('../models/signupModel');
 
+// Create a new event
 router.post('/addEvent', verifyToken, async (req, res) => {
     try {
         const currentDate = new Date();
@@ -25,15 +26,6 @@ router.post('/addEvent', verifyToken, async (req, res) => {
     }
 });
 
-// router.get('/getEventList', verifyToken, async (req, res) => {
-//     try {
-//         const events = await Event.find();
-//         res.json({ events });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Something went wrong', error });
-//     }
-// });
-
 // Get the list of events
 router.get('/getEventList',async (req, res) => {
     try {
@@ -53,6 +45,7 @@ router.get('/getEventList',async (req, res) => {
     }
 });
 
+// Get event by ID
 router.get('/getEvent/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -68,7 +61,7 @@ router.get('/getEvent/:id', verifyToken, async (req, res) => {
     }
 });
 
-
+// Get events created by the user using their email
 router.get('/getEventbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -99,7 +92,7 @@ router.get('/getEventbyemail', verifyToken, async (req, res) => {
     }
 });
 
-
+// Update event details
 router.put('/updateEvent/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -115,6 +108,7 @@ router.put('/updateEvent/:id', verifyToken, async (req, res) => {
     }
 });
 
+// Delete an event
 router.delete('/delEventList/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;

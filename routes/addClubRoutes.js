@@ -3,6 +3,7 @@ const router = express.Router()
 const addClub = require('../models/addClubModel');
 const verifyToken = require('../middleware')
 
+// create a new club
 router.post('/addClub', verifyToken, async (req, res) => {
     try {
       const existingClub = await addClub.findOne({ contactEmail: req.body.contactEmail });
@@ -40,7 +41,7 @@ router.get('/getClubList/:id', verifyToken, async (req, res) => {
     }
 });
 
-
+// Update club details
 router.put('/updateClub/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -56,7 +57,7 @@ router.put('/updateClub/:id', verifyToken, async (req, res) => {
     }
 });
 
-
+// Delete a club
 router.delete('/deleteClub/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
@@ -71,6 +72,5 @@ router.delete('/deleteClub/:id', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Something went wrong', error });
     }
 })
-
 
 module.exports = router;

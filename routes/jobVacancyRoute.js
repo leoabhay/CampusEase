@@ -1,10 +1,7 @@
-
 const express = require('express');
 const router = express.Router();
 const Vacancy = require('../models/jobVacancy')
-
 // const verifyToken=require('../middleware')
-
 
 router.post('/postVacancies', async (req, res) => {
     try {
@@ -60,6 +57,5 @@ router.delete('/vacancies/:id', async (req, res) => {
         res.status(500).send(error);
     }
 });
-
 
 module.exports = router;
