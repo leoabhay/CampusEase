@@ -6,11 +6,11 @@ const userSocketMap = {};
 
 function setupSocket(io) {
   io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
+    // console.log('Client connected:', socket.id);
 
     socket.on('register', (userId) => {
       userSocketMap[userId] = socket.id;
-      console.log(` User ${userId} registered`);
+      // console.log(` User ${userId} registered`);
 
       // Broadcast current online users
       io.emit('online-users', Object.keys(userSocketMap));
