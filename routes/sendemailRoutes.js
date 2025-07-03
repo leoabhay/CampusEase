@@ -209,35 +209,36 @@ router.post('/signupAdmin', async (req, res) => {
   }
 });
 
-
-
-
 router.get('/verify-signup', async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    let decoded;
     try {
-        const { token } = req.query;
-
-        let decoded;
-        try {
-            decoded = jwt.verify(token, 'secretKey');  
-        } catch (err) {
-            return res.json({ message: 'Verification link expired or invalid' });
-        }
-
-        const user = await userRegister.findOne({ email: decoded.email });
-
-        if (!user) {
-            return res.json({ message: 'Invalid verification link' });
-        }
-
-        user.isVerified = true;
-        await user.save();
-        console.log('Email verification successful, you can now log in');
-        return res.redirect('http://localhost:4200/login');
-        //return res.status(200).json({ message: 'Email verification successful, you can now log in' });
-    } catch (error) {
-        return res.status(500).json({ message: 'Something went wrong', error });
+      decoded = jwt.verify(token, 'secretKey');  
+    } catch (err) {
+      return res.json({ message: 'Verification link expired or invalid' });
     }
+
+    const user = await userRegister.findOne({ email: decoded.email });
+
+    if (!user) {
+      return res.json({ message: 'Invalid verification link' });
+    }
+
+    user.isVerified = true;
+    await user.save();
+    console.log('Email verification successful');
+
+    // 🔁 Redirect user to reset-password page after verification
+    const resetToken = jwt.sign({ email: user.email }, 'secretkey', { expiresIn: '15m' });
+    return res.redirect(`http://localhost:4200/reset-password?token=${resetToken}`);
+
+  } catch (error) {
+    return res.status(500).json({ message: 'Something went wrong', error });
+  }
 });
+
 
 
 // Step 1: Request Reset Password - send email with token link

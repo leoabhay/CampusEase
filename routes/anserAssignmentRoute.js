@@ -30,42 +30,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"), async (req, res) => {
-//   try {
-//     const { rollno } = req.user;
-//     const { subject, assignment } = req.body;
-//     const file = req.file;
-
-//     if (!file) {
-//       return res.status(400).json({ error: 'No file uploaded' });
-//     }
-
-//     const existingAssignment = await giveAssignmentModel.findOne({ assignmentName: assignment }).lean().exec();
-
-//     if (!existingAssignment) {
-//       return res.status(404).json({ error: 'Assignment not found' });
-//     }
-
-//     const dueDate = new Date(existingAssignment.dueDate);
-//     const submittedDate = Date.now();
-
-//     const newAssignment = new answerAssignment({
-//       subject,
-//       assignment,
-//       assignmentFile: `http://localhost:3200/uploads/${file.filename}`,
-//       rollno,
-//       submitteddate: submittedDate
-//     });
-
-//     await newAssignment.save();
-
-//     const status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
-//     res.status(201).json({ message: "Assignment submitted successfully.", newAssignment, status: status });
-//   } catch (error) {
-//     console.error('Error creating assignment:', error);
-//     return res.status(500).json({ message: 'Error creating assignment', error });
-//   }
-// });
+// Create a new assignment submission
 router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"), async (req, res) => {
   try {
     const { rollno } = req.user;
@@ -97,14 +62,14 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
 
     await newAssignment.save();
 
-    // ⏰ Status
+    // Status
     const dueDate = new Date(existingAssignment.dueDate);
     const status = submittedDate <= dueDate ? 'Submitted on Time' : 'Submitted Late';
 
-    // 🧑‍🎓 Get student details
+    // Get student details
     const student = await Signup.findOne({ rollno }).lean();
 
-    // 🧑‍🏫 Find teacher of this subject
+    // Find teacher of this subject
     const enrollment = await Enrollment.findOne({ "subjects.name": subject, "subjects.teacher": { $exists: true } });
     if (!enrollment) {
       return res.status(404).json({ message: 'No teacher found for this subject' });
@@ -113,7 +78,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     const teacherInfo = enrollment.subjects.find(s => s.name === subject);
     const teacherEmail = teacherInfo?.teacher;
 
-    // 📧 Send email to teacher
+    // Send email to teacher
     if (teacherEmail) {
       const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -139,7 +104,6 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
   }
 });
 
-
   // Read All
   router.get('/getassignments', async (req, res) => {
     try {
@@ -161,29 +125,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     }
   });
   
-//Read One by email  student le upload garako 
-  // router.get('/getassignmentsbyemail', verifyToken, async (req, res) => {
-  //   try {
-  //       const { email } = req.user;
-  //       const user = await Signup.findOne({ email });
-  
-  //       // If the user is not found, handle the error
-  //       if (!user) {
-  //           return res.status(404).json({ message: 'User not found' });
-  //       }
-        
-  //       const assignment = await answerAssignment.find({ rollno: user.rollno });
-  //        // Check if assignment is an empty array
-  //       if (!assignment || assignment.length === 0) {
-  //         return res.status(404).json({ message: 'No assignment found' });
-  //       }
-  //       res.json({ Assignment: assignment });
-       
-  //   } catch (error) {
-  //       console.error('Error fetching assignment:', error); // Log the error
-  //       res.status(500).json({ message: 'Error fetching assignment', error: error.message });
-  //   }
-  // });
+// Get assignments by email
   router.get('/getassignmentsbyemail', verifyToken, async (req, res) => {
     try {
       const { email } = req.user;
@@ -224,7 +166,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     }
   });
 
-
+// Get assignments by subject taught by the teacher
   router.get('/getassignmentsbysubject', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -264,23 +206,6 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
         res.status(500).json({ message: 'Error fetching assignment', error: error.message });
     }
   });
-
-
-  // // Update
-  // router.put('/putassignments/:id', upload.single('assignmentFile'), async (req, res) => {
-  //   try {
-  //     const { subject, assignment, rollno, remarks } = req.body;
-  //     const updateData = { subject, assignment, rollno, remarks };
-  //     if (req.file) updateData.file = req.file.path;
-  
-  //     const updatedAssignment = await answerAssignment.findByIdAndUpdate(req.params.id, updateData, { new: true });
-  //     if (!updatedAssignment) return res.status(404).json({ message: 'Assignment not found' });
-  
-  //     res.json(updatedAssignment);
-  //   } catch (error) {
-  //     res.status(500).json({ message: 'Error updating assignment', error });
-  //   }
-  // });
   
   // Delete
   router.delete('/delassignments/:id', async (req, res) => {
@@ -293,43 +218,6 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
       res.status(500).json({ message: 'Error deleting assignment', error });
     }
   });
-
-// // Filter students by name, email or roll number
-// router.get('/students/search', verifyToken, async (req, res) => {
-//   try {
-//     const { name, rollno , email } = req.query;
-
-//     // Build the query object based on the provided parameters
-//     const query = {};
-//     if (name) {
-//       query.name = name;
-//     }
-//     if (email) {
-//       query.email = email;
-//     }
-//     if (rollno) {
-//       query.rollno = rollno;
-//     }
-//     // Ensure at least one parameter is provided
-//     if (!name && !rollno && !email) {
-//       return res.status(400).json({ message: 'At least one of name,email or roll number must be provided' });
-//     }
-
-//     const students = await userRegister.find(query).lean().exec();
-//     if (!students || students.length === 0) {
-//       return res.status(404).json({ message: 'No students found' });
-//     }
-//    const assignment=await answerAssignment.find(query).lean().exec();
-//    if (!assignment || assignment.length === 0) {
-//     return res.status(404).json({ message: 'No assignment found for this student' });
-//   }
-//     res.status(200).json(assignment);
-//   } catch (error) {
-//     console.error('Error fetching students:', error);
-//     res.status(500).json({ message: 'Error fetching students', error: error.message });
-//   }
-// });
-
 
 // Function to search student data
 async function searchStudent(query) {
@@ -390,4 +278,3 @@ router.post('/search-student', async (req, res) => {
 });
 
   module.exports = router;
-  
