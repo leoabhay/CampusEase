@@ -16,7 +16,7 @@ const RegisterSchema = new mongoose.Schema({
   registereddate: { type: String },
   isVerified: { type: Boolean, required: true },
   
-   forceResetPassword: { type: Boolean, default: true }
+  //  forceResetPassword: { type: Boolean, default: true }
 });
 
 const Register = mongoose.model('register', RegisterSchema);

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const userRegister = require('../models/signupModel');
@@ -17,7 +18,7 @@ const transporter = nodemailer.createTransport({
 function sendVerificationEmail(user) {
     const token = jwt.sign(
         { email: user.email },
-        'secretKey',  
+        process.env.SECRET_KEY,  
         { expiresIn: '1h' }  // Token expires in 1 hour
     );
     const verificationUrl = `http://localhost:3200/verify-signup?token=${token}`;
@@ -215,7 +216,7 @@ router.get('/verify-signup', async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, 'secretKey');  
+      decoded = jwt.verify(token, process.env.SECRET_KEY);  
     } catch (err) {
       return res.json({ message: 'Verification link expired or invalid' });
     }
@@ -231,7 +232,7 @@ router.get('/verify-signup', async (req, res) => {
     console.log('Email verification successful');
 
     // 🔁 Redirect user to reset-password page after verification
-    const resetToken = jwt.sign({ email: user.email }, 'secretkey', { expiresIn: '15m' });
+    const resetToken = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '15m' });
     return res.redirect(`http://localhost:4200/reset-password?token=${resetToken}`);
 
   } catch (error) {
@@ -251,7 +252,7 @@ router.post('/request-reset-password', async (req, res) => {
       return res.status(400).json({ message: 'User not found' });
     }
 
-    const token = jwt.sign({ email: user.email }, 'secretkey', { expiresIn: '1h' });
+    const token = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '1h' });
     // IMPORTANT: This should point to your FRONTEND reset page URL (e.g., Angular app)
     const resetUrl = `http://localhost:4200/reset-password?token=${token}`;
 
@@ -324,7 +325,7 @@ router.post('/reset-password', async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, 'secretkey');
+      decoded = jwt.verify(token, process.env.SECRET_KEY);
     } catch (err) {
       console.error('JWT verification error:', err);
       return res.status(400).json({ message: 'Invalid or expired token', error: err.message });

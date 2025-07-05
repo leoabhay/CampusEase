@@ -1,19 +1,17 @@
-const mongoose= require('mongoose');
+const mongoose = require('mongoose');
 
-const idcardSchema= new mongoose.Schema({
-    name:{type:String, required:true},
-    rollno:{ type:Number, required:true},
-    email:{type:String, required:true},
-    semester:{ type: String, required:true},
-    contactNo:{ type:Number, required:true},
-    department: { type: String, required:true},
-    validuntil:{ type: String},
-    reason:{ type: String, required:true},
-    photo:{type : String},
-      isPaid: {
-    type: Boolean,
-    default: false,  // default unpaid
-  },
-})
-const IdCard = mongoose.model('IdCard', idcardSchema)
-module.exports = IdCard;
+const idCardSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  rollno: String,
+  semester: String,
+  contactNo: String,
+  department: String,
+  reason: String,
+  photo: String,
+  isPaid: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('IdCard', idCardSchema);

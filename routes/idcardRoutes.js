@@ -20,7 +20,7 @@ router.post('/postIdCard', verifyToken, async (req, res) => {
         if (!user) {
           return res.status(404).send('User is not enrolled');
         }
-        console.log('User subjects:', user.subjects);
+        // console.log('User subjects:', user.subjects);
         const subjectNames = user.subjects.map(subject => subject.name);
         const subject = await Enrollment.findOne({ 'subjects.name': { $in: subjectNames } });
         if (!subject) {
@@ -45,7 +45,9 @@ router.post('/postIdCard', verifyToken, async (req, res) => {
           department: subject.department,
          // department:req.body.department,
           reason: req.body.reason,
-          photo:users.photo
+          photo:users.photo,
+          isPaid: true,
+          isApproved: false,
         });
         await data.save();
         res.status(200).json({ message: 'Requested for ID-card replacement', data });
@@ -149,7 +151,7 @@ router.post('/approvePayment/:id', async (req, res) => {
   try {
     const updatedCard = await IdCard.findByIdAndUpdate(
       req.params.id,
-      { isPaid: true },
+      { isApproved: true },
       { new: true }
     );
 

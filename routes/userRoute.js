@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -102,8 +103,8 @@ router.post('/signin', async (req, res) => {
             return res.json({ message: 'password is incorrect' });
         }
         const userRole = userData.role;
-        // const token = jwt.sign({ email: userData.email }, 'secretKey');
-        const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , role: userData.role }, 'secretKey');
+        // const token = jwt.sign({ email: userData.email }, 'process.env.SECRET_KEY');
+        const token = jwt.sign({ email: userData.email, userId: userData._id , name: userData.name , rollno: userData.rollno , role: userData.role }, process.env.SECRET_KEY);
 
         res.json({ message: 'Login Sucessfull', role: userRole, token: token });
     }
@@ -221,7 +222,7 @@ router.delete('/user/:id', verifyToken,async (req, res) => {
 
 // Filter students by email or roll number or name
 // Search one student
-router.get('/student/search', verifyToken, async (req, res) => {
+router.get('/student/search',  async (req, res) => {
   try {
     const { name, rollno, email } = req.query;
 
@@ -267,7 +268,7 @@ router.get('/student/search', verifyToken, async (req, res) => {
 });
 
 // Search one faculty
-router.get('/faculty/search', verifyToken, async (req, res) => {
+router.get('/faculty/search',  async (req, res) => {
   try {
     const { name, email } = req.query;
     const orConditions = [];
@@ -298,7 +299,7 @@ router.get('/faculty/search', verifyToken, async (req, res) => {
 });
 
 // Search one secretary
-router.get('/secretary/search', verifyToken, async (req, res) => {
+router.get('/secretary/search',  async (req, res) => {
   try {
     const { name, email } = req.query;
 

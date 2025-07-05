@@ -66,7 +66,7 @@ router.post('/postEnrollmentKeyForm', verifyToken, async (req, res) => {
       return res.json({ message: 'Enrollment key is not found' });
     }
 
-    console.log('Associated Subjects:', findEnrollmentKey.subjects);
+    // console.log('Associated Subjects:', findEnrollmentKey.subjects);
     const enrolledSubjects = new UserSubjects({
       enrollment_key: findEnrollmentKey.enrollment_key,
       subjects: findEnrollmentKey.subjects,
