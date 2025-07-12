@@ -1,4 +1,3 @@
-// models/userSubjectsModel.js
 const mongoose = require('mongoose');
 
 const userSubjectsSchema = new mongoose.Schema({

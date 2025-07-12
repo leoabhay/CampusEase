@@ -12,4 +12,5 @@ const formSponsorshipSchema = new mongoose.Schema({
 });
 
 const SponsorshipForm = mongoose.model('sponsorshipForm', formSponsorshipSchema);
+
 module.exports = SponsorshipForm;

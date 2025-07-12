@@ -8,4 +8,5 @@ const internalMarksSchema = new mongoose.Schema({
 });
 
 const InternalMarks = mongoose.model('InternalMarks', internalMarksSchema);
+
 module.exports = InternalMarks;

@@ -14,9 +14,7 @@ const RegisterSchema = new mongoose.Schema({
     default: 'student'
   },
   registereddate: { type: String },
-  isVerified: { type: Boolean, required: true },
-  
-  //  forceResetPassword: { type: Boolean, default: true }
+  isVerified: { type: Boolean, required: true }
 });
 
 const Register = mongoose.model('register', RegisterSchema);

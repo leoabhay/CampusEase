@@ -17,6 +17,8 @@ const SponsorshipSchema= new mongoose.Schema({
         type:String,
         enum:['accepted','rejected','pending']
     }
-})
-const Sponsorship = mongoose.model('sponsorship',SponsorshipSchema)
+});
+
+const Sponsorship = mongoose.model('sponsorship',SponsorshipSchema);
+
 module.exports = Sponsorship; 

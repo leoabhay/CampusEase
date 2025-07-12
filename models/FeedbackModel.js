@@ -8,7 +8,8 @@ const FeedbackSchema = new mongoose.Schema({
         enum: ['Admin', 'Teacher'], required: true
     },
     feedbackAbout: { type: String, required: true },
-    // date:{type:Date}
-})
-const Feedback = mongoose.model('feedback', FeedbackSchema)
+});
+
+const Feedback = mongoose.model('feedback', FeedbackSchema);
+
 module.exports = Feedback;
