@@ -24,6 +24,7 @@ const userRoutes= require('./routes/userRoute')
 const discussion= require('./routes/discussionRoutes')
 const joinClub= require('./routes/joinClubRoutes')
 const sponsorShip= require('./routes/sponsorshipRoutes')
+const cvRoutes = require('./routes/cvRoutes')
 const addUser=require('./routes/attendanceRoutes')
 const addClub=require('./routes/addClubRoutes')
 const enrollment= require('./routes/enrollmentRoutes')
@@ -47,7 +48,17 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
 app.use(express.json());
-app.use(cors());
+
+// cors
+const corsOptions = {
+  origin: 'http://localhost:4200', // your Angular frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // allow JWT token header
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
 
 // routes(api)
 app.use(userRoutes);
@@ -75,6 +86,7 @@ app.use(excelRoutes);
 app.use(sendemail);
 app.use(attendanceRoutes);
 app.use(messageRoutes);
+app.use(cvRoutes)
 
 // Serve static files from the "uploads" directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

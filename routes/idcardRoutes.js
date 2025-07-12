@@ -186,8 +186,8 @@ router.post('/declinePayment/:id', async (req, res) => {
 
 
 router.put('/IDCardUpdate/:id', async (req, res) => {
-  console.log('PUT /IDCardUpdate called with id:', req.params.id);
-  console.log('Request body:', req.body);
+  // console.log('PUT /IDCardUpdate called with id:', req.params.id);
+  // console.log('Request body:', req.body);
 
   try {
     const updatedCard = await IdCard.findByIdAndUpdate(
