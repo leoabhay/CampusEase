@@ -5,6 +5,8 @@ const DiscussionSchema= new mongoose.Schema({
     date:{type:String, required: true}, 
     decision_by:{type:String , required: true},
     decision:{type:String , required: true}
-})
-const Discussion = mongoose.model('discussion',DiscussionSchema)
+});
+
+const Discussion = mongoose.model('discussion',DiscussionSchema);
+
 module.exports = Discussion;

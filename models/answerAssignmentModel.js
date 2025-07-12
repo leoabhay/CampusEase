@@ -6,6 +6,8 @@ const answerAssignmentSchema= new mongoose.Schema({
     assignmentFile:{type:String},
     rollno:{type:Number},
     submitteddate:{type:Date},
-})
-const Answer_Assignment = mongoose.model('answer_assignment',answerAssignmentSchema)
+});
+
+const Answer_Assignment = mongoose.model('answer_assignment', answerAssignmentSchema);
+
 module.exports = Answer_Assignment;

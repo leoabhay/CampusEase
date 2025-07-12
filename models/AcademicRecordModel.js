@@ -6,6 +6,8 @@ const AcademicRecordSchema= new mongoose.Schema({
     Subject:{type: String, required:true},
     Credit:{type: Number, required:true},
     Grade:{ type:Number, required:true}
-})
-const AcademicRecord = mongoose.model('academicRecord',AcademicRecordSchema)
+});
+
+const AcademicRecord = mongoose.model('academicRecord', AcademicRecordSchema);
+
 module.exports = AcademicRecord;

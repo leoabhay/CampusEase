@@ -20,8 +20,9 @@ const enrollmentSchema = new mongoose.Schema({
         type: String,
         required: true 
       },
-    }],
-   
+    }], 
   });
+
   const EnrollmentSubjects = mongoose.model('EnrollmentSubjects', enrollmentSchema);
+  
   module.exports = EnrollmentSubjects;
