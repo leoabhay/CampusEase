@@ -56,7 +56,7 @@ app.use(express.json());
 // cors
 const corsOptions = {
   origin: 'http://localhost:4200', // frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'], // allow JWT token header
   credentials: true,
 };

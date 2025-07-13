@@ -16,21 +16,21 @@ const FeeSchema = new mongoose.Schema({
   },
   method: {
     type: String,
-    enum: ['Cash', 'Card', 'Online'],
+    enum: ['Cash', 'Card', 'Online', 'QR'],
     required: true
   },
   status: {
     type: String,
-    enum: ['Paid', 'Pending', 'Rejected'],
-    default: function () {
-      return this.method === 'Cash' ? 'Pending' : 'Paid';
-    }
+    enum: ['Paid', 'Pending', 'Unpaid', 'Rejected'],
+    default: 'Unpaid'
   },
   receiptNumber: {
     type: String,
     required: true,
     unique: true
   }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Fee', FeeSchema);

@@ -1,5 +1,3 @@
-// This is a simple client script to connect to the Socket.IO server
-
 const { io } = require('socket.io-client');
 
 const socket = io('http://localhost:3200', {
