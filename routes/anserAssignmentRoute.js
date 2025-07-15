@@ -18,7 +18,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -104,7 +103,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
   }
 });
 
-  // Read All
+  // Read All assignments
   router.get('/getassignments', async (req, res) => {
     try {
       const assignments = await answerAssignment.find();
@@ -114,7 +113,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     }
   });
   
-  // Read One
+  // Read One assignment
   router.get('/getassignments/:id', async (req, res) => {
     try {
       const assignment = await answerAssignment.findById(req.params.id);
@@ -207,7 +206,7 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
     }
   });
   
-  // Delete
+  // Delete assignment
   router.delete('/delassignments/:id', async (req, res) => {
     try {
       const deletedAssignment = await answerAssignment.findByIdAndDelete(req.params.id);

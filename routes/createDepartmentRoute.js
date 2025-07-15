@@ -1,9 +1,9 @@
-
 const express = require('express');
 const router = express.Router();
 const createDepartmentListModel = require('../models/createDepartmentModel');
 const verifyToken = require('../middleware');
 
+// create a new department
 router.post('/postDepartments', async (req, res) => {
     try {
         const existingDepartment = await createDepartmentListModel.findOne({ hod: req.body.hod });
@@ -19,6 +19,7 @@ router.post('/postDepartments', async (req, res) => {
     }
 });
 
+// get all departments
 router.get('/getDepartments', async (req, res) => {
     try {
         const departments = await createDepartmentListModel.find();
@@ -28,6 +29,7 @@ router.get('/getDepartments', async (req, res) => {
     }
 });
 
+// get one department
 router.get('/departments/:id', async (req, res) => {
     try {
         const department = await createDepartmentListModel.findById(req.params.id);
@@ -40,6 +42,7 @@ router.get('/departments/:id', async (req, res) => {
     }
 });
 
+// update a department
 router.put('/departments/:id', async (req, res) => {
     try {
         // const department = await createDepartmentListModel.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -54,6 +57,7 @@ router.put('/departments/:id', async (req, res) => {
     }
 });
 
+// delete a department
 router.delete('/departments/:id', async (req, res) => {
     try {
         const department = await createDepartmentListModel.findByIdAndDelete(req.params.id);
@@ -65,6 +69,5 @@ router.delete('/departments/:id', async (req, res) => {
         res.status(500).send(error);
     }
 });
-
 
 module.exports = router;

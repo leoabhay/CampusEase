@@ -3,7 +3,7 @@ const router = express.Router();
 const verifyToken=require('../middleware')
 const Discussion = require('../models/discussionModel');
 
-
+// create a new discussion
 router.post('/discussion',verifyToken,  async (req, res) => {
     try {
         const newDiscussion = new Discussion({
@@ -21,7 +21,7 @@ router.post('/discussion',verifyToken,  async (req, res) => {
     }
 })
 
-
+// get all discussion
 router.get('/getdiscussion', verifyToken, async (req, res) => {
     const discussion = await Discussion.find();
     res.json({ discussion: discussion });
@@ -47,6 +47,7 @@ router.get('/discussion/:id', verifyToken, async (req, res) => {
     }
 });
 
+// delete a discussion
 router.delete('/discussion/:id', verifyToken, async (req, res) => {
     try {
        const discussion=  await Discussion.findByIdAndDelete(req.params.id);

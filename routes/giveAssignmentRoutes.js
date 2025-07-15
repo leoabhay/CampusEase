@@ -28,8 +28,7 @@ const storage = multer.diskStorage({
   const upload = multer({ storage: storage });
   upload.single('assignmentFile'),
 
-
-
+// Create a new assignment
 router.post('/postGiveAssignments', verifyToken, upload.single('assignmentFile'), async (req, res) => {
   try {
     const { subject, assignmentName, dueDate, remarks } = req.body;
@@ -50,13 +49,13 @@ router.post('/postGiveAssignments', verifyToken, upload.single('assignmentFile')
 
     const savedAssignment = await assignment.save();
 
-    // 🔍 Fetch only students who have enrolled in this exact subject
+    // Fetch only students who have enrolled in this exact subject
     const enrolledStudents = await UserSubjects.find({ "subjects.name": subject });
 
-    // 📧 Extract the emails of enrolled students
+    // Extract the emails of enrolled students
     const studentEmails = enrolledStudents.map(s => s.userEmail);
 
-    // ✉️ Send email only to enrolled students
+    // Send email only to enrolled students
     if (studentEmails.length > 0) {
       const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -82,7 +81,7 @@ router.post('/postGiveAssignments', verifyToken, upload.single('assignmentFile')
   }
 });
 
-
+// Read All assignments
 router.get('/getGiveAssignments', async (req, res) => {
     try {
         const assignments = await Assignment.find();
@@ -92,7 +91,7 @@ router.get('/getGiveAssignments', async (req, res) => {
     }
 });
 
-
+// Read One assignment
 router.get('/getGiveAssignments/:id', async (req, res) => {
     try {
         const assignment = await Assignment.findById(req.params.id);
@@ -106,8 +105,7 @@ router.get('/getGiveAssignments/:id', async (req, res) => {
 });
 
 
-  //aafai le deko assinment teacher ko ma dekichha 
-
+// Read All assignments
 router.get('/getassignmentsgivenbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -149,7 +147,7 @@ router.get('/getassignmentsgivenbyemail', verifyToken, async (req, res) => {
     }
   });
 
-
+  // Read All assignments
   router.get('/getAssignmentsByEnrolledSubject', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -178,7 +176,7 @@ router.get('/getassignmentsgivenbyemail', verifyToken, async (req, res) => {
     }
 });
 
-
+// Update One assignment
 router.put('/putGiveAssignments/:id', async (req, res) => {
     try {
         const assignment = await Assignment.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -191,7 +189,7 @@ router.put('/putGiveAssignments/:id', async (req, res) => {
     }
 });
 
-
+// Delete assignment
 router.delete('/giveAssignments/:id', async (req, res) => {
     try {
         const assignment = await Assignment.findByIdAndDelete(req.params.id);
