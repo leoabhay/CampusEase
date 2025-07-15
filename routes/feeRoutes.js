@@ -57,7 +57,6 @@ router.patch('/rejectFee/:id', verifyToken, async (req, res) => {
   }
 });
 
-
 // Get all fees (admin)
 router.get('/getAllFees', verifyToken, async (req, res) => {
   try {

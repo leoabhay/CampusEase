@@ -30,6 +30,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// create a new model question
 router.post('/submit-model-question', verifyToken, upload.single('file'), async (req, res) => {
   try {
     const { subject, model_question } = req.body;
@@ -86,6 +87,7 @@ router.post('/submit-model-question', verifyToken, upload.single('file'), async 
   }
 });
 
+// Read All model questions
 router.get('/model-questions', async (req, res) => {
   try {
     const modelQuestions = await ModelQuestion.find();
@@ -95,6 +97,7 @@ router.get('/model-questions', async (req, res) => {
   }
 });
 
+// Read One model question
 router.get('/model-questions/:id', async (req, res) => {
   try {
     const modelQuestion = await ModelQuestion.findById(req.params.id);
@@ -172,6 +175,7 @@ router.get('/getQuestionsByEnrolledSubject', verifyToken, async (req, res) => {
   }
 });
 
+// Update model question
 router.put('/model-questions/:id', async (req, res) => {
   try {
     const modelQuestion = await ModelQuestion.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -184,6 +188,7 @@ router.put('/model-questions/:id', async (req, res) => {
   }
 });
 
+// Delete model question
 router.delete('/model-questions/:id', async (req, res) => {
   try {
     const modelQuestion = await ModelQuestion.findByIdAndDelete(req.params.id);

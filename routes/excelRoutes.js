@@ -37,6 +37,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Upload route
 router.post('/upload', verifyToken, (req, res) => {
   upload(req, res, async (err) => {
     if (err) return res.status(400).send(err);

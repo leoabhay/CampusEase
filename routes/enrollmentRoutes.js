@@ -5,7 +5,7 @@ const UserSubjects  = require('../models/userSubjectModel')
 const verifyToken=require('../middleware')
 const Signup = require('../models/signupModel');
 
-
+// create a new enrollment
 router.post('/enrollmentCreate', async (req, res) => {
   try {
     const { enrollmentKey,semester,department, subjects } = req.body;
@@ -22,6 +22,7 @@ router.post('/enrollmentCreate', async (req, res) => {
   }
 });
 
+// get all enrollments
 router.get('/enrollmentData',verifyToken, async (req, res) => {
   try {
     const enrollments = await Enrollment.find();
@@ -31,7 +32,7 @@ router.get('/enrollmentData',verifyToken, async (req, res) => {
   }
 });
 
-
+// get all enrollments
 router.get('/enrollmentData/subjects', verifyToken, async (req, res) => {
   try {
     const { email } = req.user;
@@ -44,6 +45,7 @@ router.get('/enrollmentData/subjects', verifyToken, async (req, res) => {
   }
 });
 
+// get all enrollments
 router.get('/subjectsList', verifyToken, async (req, res) => {
   try {
     // const { email } = req.user;
@@ -83,6 +85,7 @@ router.post('/postEnrollmentKeyForm', verifyToken, async (req, res) => {
   }
 });
 
+// to get data of enrolled student in particular subject
 router.get('/enrollmentDatabyEmail',verifyToken, async (req, res) => {
   try {
     const userEmail = req.user.email;
@@ -109,9 +112,6 @@ router.delete('/enrollmentDatabyEmail',verifyToken, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-
-
 
 //to get data of enrolled student in particular subject in teacher dashboard
 router.get('/enrollmentDatabyEnrolledsubject', verifyToken, async (req, res) => {
@@ -152,6 +152,7 @@ router.get('/enrollmentDatabyEnrolledsubject', verifyToken, async (req, res) => 
   }
 });
 
+// to update the enrollment of the semester by the teacher
 router.put('/enrollmentUpdate/:id', async (req, res) => {
   try {
     const { enrollmentKey, subjects, semester,department } = req.body;
@@ -167,8 +168,7 @@ router.put('/enrollmentUpdate/:id', async (req, res) => {
   }
 });
 
-
-
+// to get data of enrolled student in particular subject
 router.get('/subjects/:id', async (req, res) => {
   try {
     const subject = await Enrollment.findOne({ 'subjects._id': req.params.id });
@@ -181,7 +181,7 @@ router.get('/subjects/:id', async (req, res) => {
   }
 });
 
-
+// to delete the enrollment of the semester by the teacher
 router.delete('/enrollmentDelete/:id', async (req, res) => {
   try {
     const enrollment = await Enrollment.findByIdAndDelete(req.params.id);
@@ -194,6 +194,7 @@ router.delete('/enrollmentDelete/:id', async (req, res) => {
   }
 });
 
+// to delete the subject of the semester by the teacher
 router.delete('/deleteSubject/:enrollmentId/:subjectCode', verifyToken, async (req, res) => {
   try {
       const { enrollmentId, subjectCode } = req.params;

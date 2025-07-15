@@ -4,6 +4,7 @@ const FeedbackModel = require('../models/FeedbackModel');
 const verifyToken = require('../middleware');
 const Signup= require('../models/signupModel');
 
+// Create a new feedback
 router.post('/addFeedback', verifyToken, async (req, res) => {
     try {
         const newFeedback = new FeedbackModel({
@@ -19,6 +20,7 @@ router.post('/addFeedback', verifyToken, async (req, res) => {
     }
 });
 
+// Get all feedback
 router.get('/getFeedbackList', verifyToken, async (req, res) => {
     try {
         const feedbackList = await FeedbackModel.find();
@@ -28,6 +30,7 @@ router.get('/getFeedbackList', verifyToken, async (req, res) => {
     }
 });
 
+// Get feedback by role
 router.get('/getFeedbackbyrole', verifyToken, async (req, res) => {
     try {
         // console.log('User info from token:', req.user);
@@ -61,7 +64,7 @@ router.get('/getFeedbackbyrole', verifyToken, async (req, res) => {
     }
 });
 
-
+// Get feedback by email
 router.get('/getFeedbackbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -92,7 +95,7 @@ router.get('/getFeedbackbyemail', verifyToken, async (req, res) => {
     }
 });
 
-
+// Update a feedback
 router.put('/updateFeedback/:id', verifyToken, async (req, res) => {
     try {
         const updatedFeedback = await FeedbackModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -105,6 +108,7 @@ router.put('/updateFeedback/:id', verifyToken, async (req, res) => {
     }
 });
 
+// Delete a feedback
 router.delete('/deleteFeedback/:id', verifyToken, async (req, res) => {
     try {
         const deletedFeedback = await FeedbackModel.findByIdAndDelete(req.params.id);
