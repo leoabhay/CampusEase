@@ -4,9 +4,8 @@ const path = require('path');
 const Profile = require('../models/profileModel');
 const Register = require('../models/signupModel');
 const verifyToken=require('../middleware')
-
-
 const router = express.Router();
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, 'uploads/');
@@ -18,6 +17,7 @@ const storage = multer.diskStorage({
   
   const upload = multer({ storage });
   
+  // Create a new profile
   router.post('/profile', verifyToken, upload.single('photo'), async (req, res) => {
     try {
       const rollno = req.user.rollno;
@@ -36,6 +36,7 @@ const storage = multer.diskStorage({
     }
   });
 
+  // Get profile data
   router.get('/profileData', verifyToken, async (req, res) => {
   try {
     const rollno = req.user.rollno;

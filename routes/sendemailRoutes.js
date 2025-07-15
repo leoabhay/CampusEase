@@ -210,6 +210,7 @@ router.post('/signupAdmin', async (req, res) => {
   }
 });
 
+// verify signup
 router.get('/verify-signup', async (req, res) => {
   try {
     const { token } = req.query;
@@ -231,7 +232,7 @@ router.get('/verify-signup', async (req, res) => {
     await user.save();
     console.log('Email verification successful');
 
-    // 🔁 Redirect user to reset-password page after verification
+    // Redirect user to reset-password page after verification
     const resetToken = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '15m' });
     return res.redirect(`http://localhost:4200/reset-password?token=${resetToken}`);
 
@@ -239,7 +240,6 @@ router.get('/verify-signup', async (req, res) => {
     return res.status(500).json({ message: 'Something went wrong', error });
   }
 });
-
 
 
 // Step 1: Request Reset Password - send email with token link

@@ -3,7 +3,8 @@ const router = express.Router();
 const Form = require('../models/sponsoeshipRequestModel');
 const verifyToken = require('../middleware');
 const Signup = require('../models/signupModel');
-// Create
+
+// Create new sponsorship
 router.post('/postsponsorship', verifyToken, async (req, res) => {
   try {
     const newForm = new Form({
@@ -24,7 +25,7 @@ router.post('/postsponsorship', verifyToken, async (req, res) => {
   }
 });
 
-// Read All
+// Read All spponsorship
 router.get('/getsponsorship', verifyToken, async (req, res) => {
   try {
     const forms = await Form.find();
@@ -34,7 +35,7 @@ router.get('/getsponsorship', verifyToken, async (req, res) => {
   }
 });
 
-// Read One
+// Read One sponsorship
 router.get('/getsponsorship/:id', verifyToken, async (req, res) => {
   try {
     const form = await Form.findById(req.params.id);
@@ -45,6 +46,7 @@ router.get('/getsponsorship/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Read One sponsorship by email
 router.get('/getsponsorshipbyemail', verifyToken, async (req, res) => {
   try {
       const { email } = req.user;
@@ -68,8 +70,7 @@ router.get('/getsponsorshipbyemail', verifyToken, async (req, res) => {
   }
 });
 
-
-
+// Read One sponsorship by role
 router.get('/getsponsorshipbyrole', verifyToken, async (req, res) => {
   try {
       const {email}=req.user;
@@ -87,7 +88,7 @@ router.get('/getsponsorshipbyrole', verifyToken, async (req, res) => {
   }
 });
 
-
+// Update sponsorship by id
 router.put('/putsponsorshipbyid/:id', verifyToken, async (req, res) => {
   try {
     const {  decision } = req.body;
@@ -104,7 +105,7 @@ router.put('/putsponsorshipbyid/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Update
+// Update sponsorship
 router.put('/putsponsorship/:id', verifyToken, async (req, res) => {
   try {
     const {name}=req.user;
@@ -117,7 +118,7 @@ router.put('/putsponsorship/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Delete
+// Delete sponsorship
 router.delete('/delsponsorship/:id', verifyToken, async (req, res) => {
   try {
     const deletedForm = await Form.findByIdAndDelete(req.params.id);
@@ -129,6 +130,5 @@ router.delete('/delsponsorship/:id', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Error deleting form', error: error.message });
   }
 });
-
 
 module.exports = router;

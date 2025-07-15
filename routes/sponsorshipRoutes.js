@@ -3,7 +3,7 @@ const router = express.Router();
 const verifyToken=require('../middleware')
 const Sponsorship = require('../models/sponsorshipModel');
 
-
+// create a new sponsorship
 router.post('/sponsorship',verifyToken, async (req, res) => {
     try {
         const newSponsorship = new Sponsorship({
@@ -26,7 +26,7 @@ router.post('/sponsorship',verifyToken, async (req, res) => {
     }
 })
 
-
+// get all sponsorships
 router.get('/getSponsorships', verifyToken, async (req, res) => {
   try {
     const { decision } = req.query; // accepted, rejected, pending
@@ -48,8 +48,7 @@ router.get('/getSponsorships', verifyToken, async (req, res) => {
   }
 });
 
-
-
+// delete a sponsorship
 router.delete('/deleteSponsorship/:id',verifyToken,async(req,res)=>{
     try{
         const deletedSponsorship=await Sponsorship.findByIdAndDelete(req.params.id)
@@ -63,6 +62,5 @@ router.delete('/deleteSponsorship/:id',verifyToken,async(req,res)=>{
         res.status(500).json({ message: 'Error deleting Sponsorship', error });
     }
 })
-
 
 module.exports = router;
