@@ -4,6 +4,9 @@ const mongoose = require('mongoose');
 const Message = require('../models/messageModel');
 const verifyToken = require('../middleware');
 
+// Import userSocketMap from your socket server
+const { userSocketMap } = require('../socketServer');
+
 // Get conversation between two users (excluding soft-deleted messages)
 router.get('/conversation/:userId', verifyToken, async (req, res) => {
   try {
@@ -35,26 +38,26 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
   }
 });
 
-// Get all conversations for current user (no filter for deleted)
+// Get all conversations for current user (with online status)
 router.get('/conversations', verifyToken, async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
+    const currentUserId = mongoose.Types.ObjectId(req.user.userId);
 
     const conversations = await Message.aggregate([
       {
         $match: {
           $or: [
-            { sender: mongoose.Types.ObjectId(currentUserId) },
-            { receiver: mongoose.Types.ObjectId(currentUserId) }
+            { sender: currentUserId },
+            { receiver: currentUserId }
           ],
-          deletedBy: { $ne: mongoose.Types.ObjectId(currentUserId) } // exclude deleted messages
+          deletedBy: { $ne: currentUserId } // exclude deleted messages
         }
       },
       {
         $project: {
           participant: {
             $cond: [
-              { $eq: ["$sender", mongoose.Types.ObjectId(currentUserId)] },
+              { $eq: ["$sender", currentUserId] },
               "$receiver",
               "$sender"
             ]
@@ -91,6 +94,12 @@ router.get('/conversations', verifyToken, async (req, res) => {
       },
       { $sort: { "lastMessage.timestamp": -1 } }
     ]);
+
+    // Add online status
+    conversations.forEach(conv => {
+      const userId = conv.participant._id.toString();
+      conv.isOnline = userSocketMap.hasOwnProperty(userId);
+    });
 
     res.json(conversations);
   } catch (err) {

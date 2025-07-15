@@ -53,7 +53,6 @@ const feeRoutes = require('./routes/feeRoutes');
 const scheduleRoutes = require('./routes/classScheduleRoutes');
 const Academic = require('./routes/academicRoutes');
 
-
 app.use(express.json());
 
 // cors
