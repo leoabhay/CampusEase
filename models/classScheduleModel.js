@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const classScheduleSchema = new mongoose.Schema({
   subject: {
     type: String,
-    // ref: 'EnrollmentSubjects',
     required: true
   },
   faculty: {
@@ -18,6 +17,13 @@ const classScheduleSchema = new mongoose.Schema({
   },
   day: {
     type: String,
+    required: true
+  },
+  block: {
+    type: String
+  },
+  date:{
+    type: Date,
     required: true
   },
   timeFrom: {

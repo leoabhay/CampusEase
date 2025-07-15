@@ -4,6 +4,7 @@ const AcademicRecord = require('../models/AcademicRecordModel');
 const Signup=require('../models/signupModel');
 const verifyToken=require('../middleware')
 
+// create a new AcademicRecord
 router.post('/postAcademicRecord',verifyToken,async (req, res) => {
     try {
         const newAcademicRecord = new AcademicRecord({
@@ -22,7 +23,7 @@ router.post('/postAcademicRecord',verifyToken,async (req, res) => {
     }
 })
 
-
+// get all AcademicRecords
 router.get('/getAcademicRecordList', verifyToken, async (req, res) => {
     try {
         const AcademicRecords = await AcademicRecord.find();
@@ -33,7 +34,7 @@ router.get('/getAcademicRecordList', verifyToken, async (req, res) => {
 });
 
 
-// Read One
+// Read One academicRecord
 router.get('/getAcademicRecord/:id', verifyToken, async (req, res) => {
     try {
       const academicRecord = await AcademicRecord.findById(req.params.id);
@@ -44,7 +45,7 @@ router.get('/getAcademicRecord/:id', verifyToken, async (req, res) => {
     }
   });
 
-
+// get AcademicRecord by email
 router.get('/getAcademicRecordbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
@@ -69,7 +70,7 @@ router.get('/getAcademicRecordbyemail', verifyToken, async (req, res) => {
   });
 
 
-  // Update
+// Update AcademicRecord
 router.put('/putAcademicRecord/:id', verifyToken, async (req, res) => {
     try {
       const {name,rollno}=req.user;
@@ -82,7 +83,7 @@ router.put('/putAcademicRecord/:id', verifyToken, async (req, res) => {
     }
   });
   
-  // Delete
+  // Delete AcademicRecord
   router.delete('/delAcademicRecord/:id', verifyToken, async (req, res) => {
     try {
       const deletedAcademicRecord = await AcademicRecord.findByIdAndDelete(req.params.id);
@@ -92,6 +93,5 @@ router.put('/putAcademicRecord/:id', verifyToken, async (req, res) => {
       res.status(500).json({ message: 'Error deleting AcademicRecord', error });
     }
   });
-
 
   module.exports = router;

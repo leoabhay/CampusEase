@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Assignment = require('../models/giveAssignmentModel');
 const AnswerAssignment = require('../models/answerAssignmentModel');
+const Attendance = require('../models/otpModel');
 
 const internalMarksSchema = new mongoose.Schema({
   rollno: { type: Number, required: true },

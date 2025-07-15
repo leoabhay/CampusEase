@@ -45,7 +45,7 @@ router.get('/getSchedules/filter', async (req, res) => {
 });
 
 // Update schedule
-router.put('/updateSchedule/:id', verifyToken, async (req, res) => {
+router.put('/updateSchedule/:id', async (req, res) => {
   try {
     const updatedSchedule = await ClassSchedule.findByIdAndUpdate(
       req.params.id,
@@ -59,7 +59,7 @@ router.put('/updateSchedule/:id', verifyToken, async (req, res) => {
 });
 
 // Delete schedule
-router.delete('/deleteSchedule/:id', verifyToken, async (req, res) => {
+router.delete('/deleteSchedule/:id', async (req, res) => {
   try {
     await ClassSchedule.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Schedule deleted' });

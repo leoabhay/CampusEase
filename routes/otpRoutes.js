@@ -96,7 +96,7 @@ router.post('/send-otp', verifyToken, async (req, res) => {
 });
 
 // Verify OTP & Location
-router.post('/verify-otp', verifyToken, async (req, res) => {
+router.post('/verify-otp', async (req, res) => {
     const { email, otp, location } = req.body;
     const currentDate = new Date();
     const formattedDate = currentDate.toDateString();

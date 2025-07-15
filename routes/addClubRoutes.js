@@ -28,10 +28,13 @@ router.post('/addClub', verifyToken, async (req, res) => {
     }
   });
 
+// get all clubs
 router.get('/getClubList', verifyToken, async (req, res) => {
     const clubName = await addClub.find();
     res.json({ clubName: clubName });
 })
+
+// get a specific club
 router.get('/getClubList/:id', verifyToken, async (req, res) => {
     try {
         const clubListById = await addClub.findById(req.params.id);
