@@ -3,6 +3,7 @@ const router = express.Router();
 const Vacancy = require('../models/jobVacancy')
 // const verifyToken=require('../middleware')
 
+// create a new vacancy
 router.post('/postVacancies', async (req, res) => {
     try {
         const vacancy = new Vacancy(req.body);
@@ -13,6 +14,7 @@ router.post('/postVacancies', async (req, res) => {
     }
 });
 
+// get all vacancies
 router.get('/getVacancies', async (req, res) => {
     try {
         const vacancies = await Vacancy.find();
@@ -22,6 +24,7 @@ router.get('/getVacancies', async (req, res) => {
     }
 });
 
+// get one vacancy
 router.get('/vacancies/:id', async (req, res) => {
     try {
         const vacancy = await Vacancy.findById(req.params.id);
@@ -34,6 +37,7 @@ router.get('/vacancies/:id', async (req, res) => {
     }
 });
 
+// update a vacancy
 router.put('/vacancies/:id', async (req, res) => {
     try {
         const vacancy = await Vacancy.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -46,6 +50,7 @@ router.put('/vacancies/:id', async (req, res) => {
     }
 });
 
+// delete a vacancy
 router.delete('/vacancies/:id', async (req, res) => {
     try {
         const vacancy = await Vacancy.findByIdAndDelete(req.params.id);

@@ -6,7 +6,7 @@ const UserSubject = require('../models/userSubjectModel');
 const verifyToken= require('../middleware');
 const Signup = require('../models/signupModel')
 
-
+// create a new id card
 router.post('/postIdCard', verifyToken, async (req, res) => {
     try {
       const { email, name, rollno } = req.user;
@@ -59,7 +59,7 @@ router.post('/postIdCard', verifyToken, async (req, res) => {
     }
   });
 
-
+  // get all id cards
   router.get('/getIdCard',verifyToken, async(req,res)=>{
     try {
         const idcard = await IdCard.find();
@@ -70,6 +70,7 @@ router.post('/postIdCard', verifyToken, async (req, res) => {
   }
 );
 
+// get id card by email
 router.get('/getidcardbyEmail',verifyToken,async(req,res)=>{
     try {
         const { email} = req.user;
@@ -86,6 +87,8 @@ router.get('/getidcardbyEmail',verifyToken,async(req,res)=>{
         res.status(500).json({ error: err.message });
       }
 });
+
+// get id card
 router.get('/idcard', verifyToken,async(req,res)=>{
   try{
     const { email, name, rollno } = req.user;
@@ -136,6 +139,7 @@ router.get('/idcard', verifyToken,async(req,res)=>{
   }
 });
 
+// delete id card
 router.delete('/deleteIdCard/:id', async (req, res) => {
     try {
       const deletedIdCard = await IdCard.findByIdAndDelete(req.params.id);
@@ -184,7 +188,7 @@ router.post('/declinePayment/:id', async (req, res) => {
   }
 });
 
-
+// Update id card
 router.put('/IDCardUpdate/:id', async (req, res) => {
   // console.log('PUT /IDCardUpdate called with id:', req.params.id);
   // console.log('Request body:', req.body);
@@ -205,6 +209,5 @@ router.put('/IDCardUpdate/:id', async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
-
 
 module.exports = router;
