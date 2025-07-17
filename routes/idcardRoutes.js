@@ -35,7 +35,7 @@ router.post('/postIdCard', verifyToken, async (req, res) => {
       if (!isSubjectMatch) {
         return res.status(404).send('Subject mismatch');
       }
-        console.log('Enrollment',subject);
+        // console.log('Enrollment',subject);
         const data = new IdCard({
           name,
           email,

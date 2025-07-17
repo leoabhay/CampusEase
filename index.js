@@ -52,6 +52,7 @@ const cvRoutes = require('./routes/cvRoutes')
 const feeRoutes = require('./routes/feeRoutes');
 const scheduleRoutes = require('./routes/classScheduleRoutes');
 const Academic = require('./routes/academicRoutes');
+const Face = require('./routes/faceRoutes');
 
 app.use(express.json());
 
@@ -95,6 +96,7 @@ app.use(cvRoutes);
 app.use(feeRoutes);
 app.use(scheduleRoutes);
 app.use(Academic);
+app.use(Face);
 
 // Serve static files from the "uploads" directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
