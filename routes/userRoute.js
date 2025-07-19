@@ -342,4 +342,16 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// update the user
+router.put('/updateUser/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const updatedUser = await userRegister.findByIdAndUpdate(id, updatedData, { new: true });
+    res.json({ message: 'User updated successfully', updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update user', error: error.message });
+  }
+});
+
 module.exports = router;
