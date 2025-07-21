@@ -176,18 +176,33 @@ router.get('/getassignmentsgivenbyemail', verifyToken, async (req, res) => {
     }
 });
 
-// Update One assignment
-router.put('/putGiveAssignments/:id', async (req, res) => {
-    try {
-        const assignment = await Assignment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!assignment) {
-            return res.status(404).json({ message: 'Assignment not found' });
-        }
-        res.json(assignment);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
+// Update assignment with optional new file
+router.put('/putGiveAssignments/:id', upload.single('assignmentFile'), async (req, res) => {
+  try {
+    const file = req.file;
+    const updateData = { ...req.body };
+
+    if (file) {
+      updateData.assignmentFile = `http://localhost:3200/uploads/${file.filename}`;
     }
+
+    const updatedAssignment = await Assignment.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedAssignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    res.json({ message: 'Assignment updated successfully', updatedAssignment });
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    res.status(500).json({ message: 'Error updating assignment', error: error.message });
+  }
 });
+
 
 // Delete assignment
 router.delete('/giveAssignments/:id', async (req, res) => {

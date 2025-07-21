@@ -175,10 +175,17 @@ router.get('/getQuestionsByEnrolledSubject', verifyToken, async (req, res) => {
   }
 });
 
-// Update model question
-router.put('/model-questions/:id', async (req, res) => {
+// Update model question with optional new file upload
+router.put('/model-questions/:id', upload.single('file'), async (req, res) => {
   try {
-    const modelQuestion = await ModelQuestion.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+
+    if (req.file) {
+      // If a new file is uploaded, update the file URL
+      updateData.file = `http://localhost:3200/uploads/${req.file.filename}`;
+    }
+
+    const modelQuestion = await ModelQuestion.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!modelQuestion) {
       return res.status(404).json({ message: 'Model question not found' });
     }

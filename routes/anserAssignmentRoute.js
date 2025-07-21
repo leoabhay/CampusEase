@@ -205,6 +205,41 @@ router.post('/postAnswerAssignment', verifyToken, upload.single("assignmentFile"
         res.status(500).json({ message: 'Error fetching assignment', error: error.message });
     }
   });
+
+// Update assignment with new file upload
+router.put('/editassignments/:id', upload.single("assignmentFile"), async (req, res) => {
+  try {
+    const { subject, assignment } = req.body;
+    const file = req.file;
+
+    const existingAssignment = await answerAssignment.findById(req.params.id);
+
+    if (!existingAssignment) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+
+    // If a new file is uploaded, update the file path
+    let updatedData = {
+      subject: subject || existingAssignment.subject,
+      assignment: assignment || existingAssignment.assignment,
+    };
+
+    if (file) {
+      updatedData.assignmentFile = `http://localhost:3200/uploads/${file.filename}`;
+    }
+
+    const updatedAssignment = await answerAssignment.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+
+    res.json({ message: 'Assignment updated successfully', updatedAssignment });
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    res.status(500).json({ message: 'Error updating assignment', error });
+  }
+});
   
   // Delete assignment
   router.delete('/delassignments/:id', async (req, res) => {
