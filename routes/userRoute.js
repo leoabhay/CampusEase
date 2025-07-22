@@ -10,6 +10,7 @@ const Assignment = require('../models/answerAssignmentModel');
 const Course = require('../models/enrollmentModel');
 const Attendance = require('../models/otpModel');
 const Club = require('../models/addClubModel');
+const FaceAttendance = require('../models/faceModel');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -222,7 +223,7 @@ router.delete('/user/:id', verifyToken,async (req, res) => {
 
 // Filter students by email or roll number or name
 // Search one student
-router.get('/student/search',  async (req, res) => {
+router.get('/student/search', async (req, res) => {
   try {
     const { name, rollno, email } = req.query;
 
@@ -243,23 +244,25 @@ router.get('/student/search',  async (req, res) => {
       return res.status(404).json({ message: 'No student found' });
     }
 
-    // Fetch related data
-    const [assignments, allCourses, attendanceRecords] = await Promise.all([
+    // Fetch related data including face attendance
+    const [assignments, allCourses, attendanceRecords, faceAttendanceRecords] = await Promise.all([
       Assignment.find({ rollno: student.rollno }).lean(),
-      Course.find({ department: student.department || /.*/ }).lean(), // fallback for now
+      Course.find({ department: student.department || /.*/ }).lean(),
       Attendance.find({
         $or: [
           { name: student.name },
           { email: student.email }
         ]
-      }).lean()
+      }).lean(),
+      FaceAttendance.find({ rollno: student.rollno }).lean() // fetch face attendance records for the student
     ]);
 
     res.status(200).json({
       ...student,
       assignments,
-      courses: allCourses, // not working yet, need to fix
-      attendance: attendanceRecords
+      courses: allCourses,
+      attendance: attendanceRecords,
+      faceAttendance: faceAttendanceRecords // add face attendance here
     });
   } catch (error) {
     console.error('Error fetching student:', error);
