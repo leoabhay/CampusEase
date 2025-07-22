@@ -79,22 +79,24 @@ router.get('/getFeedbackbyrole', verifyToken, async (req, res) => {
 router.get('/getFeedbackbyemail', verifyToken, async (req, res) => {
     try {
         const { email } = req.user;
-        const user = await Signup.findOne({ email });
+        // console.log('Logged-in user email:', email);
 
+        const user = await Signup.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         const feedback = await FeedbackModel.find({ feedbackBy: email });
+        // console.log('Feedback found:', feedback);
 
+        // Instead of 404, send empty array if none found
         if (!feedback || feedback.length === 0) {
-            return res.status(404).json({ message: 'Feedback not found' });
+            return res.json({ feedback: [] }); // No feedback but success response
         }
 
         const feedbackByName = await Promise.all(
             feedback.map(async fb => {
                 const feedbackForUser = await Signup.findOne({ email: fb.feedbackFor });
-
                 return {
                     ...fb._doc,
                     feedbackBy: user.name,
@@ -135,13 +137,27 @@ router.get('/getAllFeedback', verifyToken, async (req, res) => {
 
 // Update a feedback
 router.put('/updateFeedback/:id', async (req, res) => {
-    try {
-        const updatedFeedback = await FeedbackModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedFeedback) return res.status(404).json({ message: 'Feedback not found' });
-        res.json(updatedFeedback);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+  try {
+    // Make a copy of the update data
+    const updateData = { ...req.body };
+
+    // Remove feedbackBy to prevent changes
+    if ('feedbackBy' in updateData) {
+      delete updateData.feedbackBy;
     }
+
+    const updatedFeedback = await FeedbackModel.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedFeedback) return res.status(404).json({ message: 'Feedback not found' });
+
+    res.json(updatedFeedback);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Delete a feedback

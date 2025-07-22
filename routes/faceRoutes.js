@@ -89,6 +89,18 @@ router.get('/getFaceAttendances/:rollno', verifyToken, async (req, res) => {
   }
 });
 
+// Get attendance by email
+router.get('/getFaceAttendancesByEmail', verifyToken, async (req, res) => {
+  try {
+    const email = req.params.email;
+    const attendances = await Attendance.find({ email });
+    res.json(attendances);
+  } catch (err) {
+    console.error('Error fetching attendances:', err);
+    res.status(500).json({ message: 'Failed to fetch attendances' });
+  }
+});
+
 // Delete attendance by ID
 router.delete('/deleteFaceAttendance/:id', async (req, res) => {
   try {
