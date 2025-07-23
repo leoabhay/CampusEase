@@ -66,7 +66,7 @@ async function sendOtp(email, otp, date) {
 }
 
 // Send OTP (Upsert – avoid duplicates)
-router.post('/send-otp', verifyToken, async (req, res) => {
+router.post('/send-otp', async (req, res) => {
     const currentDate = new Date();
     const formattedDate = currentDate.toDateString();
 

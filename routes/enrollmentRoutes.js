@@ -8,13 +8,29 @@ const Signup = require('../models/signupModel');
 // create a new enrollment
 router.post('/enrollmentCreate', async (req, res) => {
   try {
-    const { enrollmentKey,semester,department, subjects } = req.body;
+    const { enrollmentKey, semester, department, subjects } = req.body;
+
+    // Loop through each subject to validate
+    for (const subject of subjects) {
+      const existingEnrollment = await Enrollment.findOne({
+        semester: semester,
+        "subjects.teacher": subject.teacher,
+      });
+
+      if (existingEnrollment) {
+        return res.status(400).json({
+          message: `Teacher ${subject.teacher} is already assigned to a subject in semester ${semester}`,
+        });
+      }
+    }
+
     const enrollment = new Enrollment({
       enrollment_key: enrollmentKey,
-      semester: semester,
-      department: department,
-      subjects: subjects,
+      semester,
+      department,
+      subjects,
     });
+
     const savedEnrollment = await enrollment.save();
     res.status(201).json(savedEnrollment);
   } catch (err) {
@@ -58,6 +74,7 @@ router.get('/subjectsList', verifyToken, async (req, res) => {
   }
 });
 
+// to post the enrollment key form by the student
 router.post('/postEnrollmentKeyForm', verifyToken, async (req, res) => {
   try {
     const { enrollment_key,userEmail } = req.body;
@@ -155,14 +172,46 @@ router.get('/enrollmentDatabyEnrolledsubject', verifyToken, async (req, res) => 
 // to update the enrollment of the semester by the teacher
 router.put('/enrollmentUpdate/:id', async (req, res) => {
   try {
-    const { enrollmentKey, subjects, semester,department } = req.body;
-    const updatedEnrollment = await Enrollment.findByIdAndUpdate(req.params.id, {
-      enrollment_key: enrollmentKey,
-      subjects: subjects,
-      semester,
-      department
-    }, { new: true });
-    res.json(updatedEnrollment);
+    const { enrollmentKey, subjects, semester, department } = req.body;
+
+    // Check for duplicate teacher assignment in the same semester
+    for (const subject of subjects) {
+      const existingEnrollment = await Enrollment.findOne({
+        _id: { $ne: req.params.id }, // exclude current enrollment
+        semester: semester,
+        "subjects.teacher": subject.teacher,
+      });
+
+      if (existingEnrollment) {
+        return res.status(400).json({
+          message: `Teacher ${subject.teacher} is already assigned to a subject in semester ${semester}`,
+        });
+      }
+    }
+
+    // Update Enrollment
+    const updatedEnrollment = await Enrollment.findByIdAndUpdate(
+      req.params.id,
+      {
+        enrollment_key: enrollmentKey,
+        subjects,
+        semester,
+        department,
+      },
+      { new: true }
+    );
+
+    // Also update UserSubjects for students who enrolled using this enrollment key
+    const studentEnrollments = await UserSubjects.updateMany(
+      { enrollment_key: enrollmentKey },
+      { $set: { subjects } }
+    );
+
+    res.json({
+      message: 'Enrollment updated successfully',
+      updatedEnrollment,
+      updatedStudentSubjects: studentEnrollments.modifiedCount || 0,
+    });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

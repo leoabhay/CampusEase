@@ -5,6 +5,7 @@ const Attendance = require('../models/faceModel');
 const EnrollmentSubjects = require('../models/enrollmentModel');
 const verifyToken = require('../middleware');
 const Register = require('../models/signupModel');
+const UserSubjects = require('../models/userSubjectModel');
 
 // Route to mark attendance
 router.post('/mark-attendance', async (req, res) => {
@@ -56,7 +57,7 @@ router.post('/mark-attendance', async (req, res) => {
     }
 
     // Save attendance record
-    await new Attendance({ rollno, subjectName }).save();
+    await new Attendance({ rollno, subjectName, image }).save();
 
     return res.json({ message: 'Attendance marked', rollno });
 
@@ -127,6 +128,64 @@ router.get('/valid-rollnos', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch roll numbers' });
   }
 });
+
+// Get attendance of students enrolled in subjects taught by current faculty
+router.get('/getFaceAttendanceForMySubjects', verifyToken, async (req, res) => {
+  try {
+    const facultyEmail = req.user.email;
+
+    // Get all enrollments where faculty teaches some subjects
+    const facultyEnrollments = await EnrollmentSubjects.find({
+      "subjects.teacher": facultyEmail
+    });
+
+    if (!facultyEnrollments.length) {
+      return res.status(404).json({ message: 'No subjects found for this faculty' });
+    }
+
+    // Extract all subjects taught by this faculty
+    const taughtSubjects = facultyEnrollments
+      .flatMap(enrollment => enrollment.subjects)
+      .filter(subject => subject.teacher === facultyEmail)
+      .map(subject => subject.name);
+
+    if (taughtSubjects.length === 0) {
+      return res.status(404).json({ message: 'No subjects found for this faculty' });
+    }
+
+    // Find students enrolled in these subjects
+    const studentEnrollments = await UserSubjects.find({
+      "subjects.name": { $in: taughtSubjects }
+    });
+
+    const studentEmails = studentEnrollments.map(e => e.userEmail);
+
+    // Find roll numbers of these students
+    const students = await Register.find({
+      email: { $in: studentEmails },
+      role: 'student'
+    }, 'rollno');
+
+    const studentRollnos = students.map(s => s.rollno).filter(Boolean);
+
+    if (studentRollnos.length === 0) {
+      return res.status(404).json({ message: 'No students found enrolled in your subjects' });
+    }
+
+    // Fetch attendance records for these rollnos and subjects
+    const attendanceRecords = await Attendance.find({
+      rollno: { $in: studentRollnos },
+      subjectName: { $in: taughtSubjects }
+    });
+
+    return res.json(attendanceRecords);
+
+  } catch (err) {
+    console.error('Error in getFaceAttendanceForMySubjects:', err);
+    res.status(500).json({ message: 'Failed to fetch attendance', error: err.message });
+  }
+});
+
 
 // Route to register face
 router.post('/register-face', async (req, res) => {
