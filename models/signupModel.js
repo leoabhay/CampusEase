@@ -13,6 +13,10 @@ const RegisterSchema = new mongoose.Schema({
     enum: ['student', 'faculty', 'secretary', 'admin'],
     default: 'student'
   },
+  isPasswordSet: {
+  type: Boolean,
+  default: false
+},
   registereddate: { type: String },
   isVerified: { type: Boolean, required: true }
 });

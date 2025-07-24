@@ -97,6 +97,9 @@ router.post('/signin', async (req, res) => {
         if(userData.isVerified !=true){
           return res.json({ message: 'User is not verified. Please verify before login! ',userData });
         }
+        if (!userData.isPasswordSet) {
+        return res.status(403).json({ message: 'Please set your password before logging in.' });
+        }
         const userPasswordMatch = await bcrypt.compare(password, userData.password);
         //const userPasswordMatch = password === userData.password;
         if (!userPasswordMatch) {
@@ -111,8 +114,6 @@ router.post('/signin', async (req, res) => {
     }
     catch (error) {
       res.status(500).json({ message: 'something went wrong', error: error.stack });
-
-
     }
 })
 

@@ -98,7 +98,8 @@ router.post('/signupUser', verifyToken,  async (req, res) => {
           confirmPassword:hashedconfirmPassword,
           role,
           registereddate: formattedDate,
-          isVerified: false
+          isVerified: false,
+          isPasswordSet: false
         });
   
         await newUser.save();
@@ -165,9 +166,10 @@ router.post('/signupAdmin', async (req, res) => {
         email,
         address,
         password: hashedPassword,
-        role: 'admin', // Force assignment
+        role: 'admin', // forced
         registereddate: currentDate,
-        isVerified: false
+        isVerified: true, // mark as verified
+        isPasswordSet: true // mark as password set
       });
 
       await newAdmin.save();
@@ -233,14 +235,13 @@ router.get('/verify-signup', async (req, res) => {
     console.log('Email verification successful');
 
     // Redirect user to reset-password page after verification
-    const resetToken = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '15m' });
-    return res.redirect(`http://localhost:4200/reset-password?token=${resetToken}`);
+    const setPasswordToken = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '15m' });
+    return res.redirect(`http://localhost:4200/set-password?token=${setPasswordToken}`);
 
   } catch (error) {
     return res.status(500).json({ message: 'Something went wrong', error });
   }
 });
-
 
 // Step 1: Request Reset Password - send email with token link
 router.post('/request-reset-password', async (req, res) => {
@@ -250,6 +251,14 @@ router.post('/request-reset-password', async (req, res) => {
     const user = await userRegister.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
+    }
+        if (!user.isVerified) {
+      return res.status(403).json({ message: 'User is not verified' });
+    }
+    if (!user.isPasswordSet) {
+      return res.status(400).json({
+        message: 'You have not set a password yet. Please use the original set password link.'
+      });
     }
 
     const token = jwt.sign({ email: user.email }, process.env.SECRET_KEY, { expiresIn: '1h' });
@@ -299,8 +308,6 @@ router.post('/request-reset-password', async (req, res) => {
         return res.status(500).json({ message: 'Error sending email', error });
       }
       console.log('Reset password email sent:', info.response);
-
-      // For testing: also send resetUrl in response (remove in production)
       res.json({ message: 'Password reset link sent to your email', resetUrl });
     });
 
@@ -346,6 +353,56 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+// Set password after first email verification
+router.post('/set-password', async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body;
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.SECRET_KEY);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired token', error: err.message });
+    }
+
+    const user = await userRegister.findOne({ email: decoded.email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if newPassword is same as current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({ message: 'Change to a new password' });
+    }
+
+    // Only allow if user has not set password yet
+    if (user.isPasswordSet) {
+      return res.status(403).json({ message: 'Password already set. Please log in.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.isPasswordSet = true; // mark as complete
+    await user.save();
+
+    return res.json({ message: 'Password set successfully. You can now log in.' });
+
+  } catch (error) {
+    console.error('Set password error:', error);
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 

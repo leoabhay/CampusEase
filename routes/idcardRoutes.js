@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const IdCard = require('../models/idcardModel');
@@ -5,6 +6,8 @@ const Enrollment = require('../models/enrollmentModel');
 const UserSubject = require('../models/userSubjectModel');
 const verifyToken= require('../middleware');
 const Signup = require('../models/signupModel')
+// const axios = require('axios');
+// const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY;
 
 // create a new id card
 router.post('/postIdCard', verifyToken, async (req, res) => {
@@ -209,5 +212,44 @@ router.put('/IDCardUpdate/:id', async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
+
+// Initiate payment with Khalti
+// This endpoint should be called from the frontend to get the Khalti payment URL
+// router.post('/initiate-payment', verifyToken, async (req, res) => {
+//   const { amount, productName, transactionId } = req.body;
+
+//   try {
+//     const khaltiUrl = 'https://a.khalti.com/api/v2/epayment/initiate/';
+
+//     const response = await axios.post(
+//       khaltiUrl,
+//       {
+//         return_url: 'http://localhost:4200/payment-success',
+//         website_url: 'http://localhost:4200',
+//         amount: Number(amount) * 100,  // amount in paisa
+//         purchase_order_id: transactionId,
+//         purchase_order_name: productName,
+//       },
+//       {
+//         headers: {
+//           Authorization: `Key ${KHALTI_SECRET_KEY}`,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+
+//     if (response.data && response.data.payment_url) {
+//       return res.status(200).json({ khaltiPaymentUrl: response.data.payment_url });
+//     } else {
+//       return res.status(400).json({ message: 'Failed to get payment URL from Khalti' });
+//     }
+//   } catch (error) {
+//     console.error('Khalti error:', error?.response?.data || error.message);
+//     return res.status(500).json({
+//       message: 'Payment initialization failed',
+//       error: error?.response?.data || error.message,
+//     });
+//   }
+// });
 
 module.exports = router;
