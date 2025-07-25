@@ -78,7 +78,7 @@ router.post('/send-otp', async (req, res) => {
             { email, date: formattedDate },
             {
                 otp,
-                otpExpiration: Date.now() + 5 * 60 * 1000,
+                otpExpiration: Date.now() + 5 * 60 * 1000,  // 5 minutes expiration
                 present: false,
                 latitude: location.latitude,
                 longitude: location.longitude

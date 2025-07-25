@@ -27,7 +27,6 @@ const userRoutes= require('./routes/userRoute')
 const discussion= require('./routes/discussionRoutes')
 const joinClub= require('./routes/joinClubRoutes')
 const sponsorShip= require('./routes/sponsorshipRoutes')
-const addUser=require('./routes/attendanceRoutes')
 const addClub=require('./routes/addClubRoutes')
 const enrollment= require('./routes/enrollmentRoutes')
 const feedback= require('./routes/feedBackRoute')
@@ -77,7 +76,6 @@ app.use(anserAssignment);
 app.use(feedback);
 app.use(sponsorShip);
 app.use(sponsorshipRequest);
-app.use(addUser);
 app.use(jobVacancy);
 app.use(addEvent);
 app.use(giveAssignment);
